@@ -9,7 +9,10 @@
 using namespace model;
 using namespace std;
 
-void MyStrategy::move(const Player& me, const World& world, const Game& game, Move& move) {
+void MyStrategy::move(const Player& me, const World& world, const Game& game, Move& move) 
+{
+    m_state.update(world, me);
+
     if (world.getTickIndex() == 0) {
         move.setAction(ACTION_CLEAR_AND_SELECT);
         move.setRight(world.getWidth());

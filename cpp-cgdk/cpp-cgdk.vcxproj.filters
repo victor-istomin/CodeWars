@@ -158,5 +158,8 @@
     <ClInclude Include="model\WeatherType.h">
       <Filter>Header Files\model</Filter>
     </ClInclude>
+    <ClInclude Include="state.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
