@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -6,17 +6,22 @@
 #include <utility>
 #include <cassert>
 #include <memory>
-#include <optional>
+#include <cmath>
 
 #include "model/World.h"
 #include "model/Player.h"
 
+#undef max
+#undef min
 
 typedef std::shared_ptr<model::Vehicle> VehiclePtr;
 typedef std::weak_ptr<model::Vehicle>   VehicleCache;
 
 struct Point 
 { 
+    static const double k_epsilon;
+    static double pow2(double d) { return d*d; }
+
     double m_x;
     double m_y;
 
@@ -24,10 +29,24 @@ struct Point
     Point(const model::Unit& unit)          : m_x(unit.getX()), m_y(unit.getY()) {}
 
     Point& operator+=(const Point& right)   { m_x += right.m_x; m_y += right.m_y; return *this; }
-    Point& operator/=(double divider)       { m_x /= divider; m_y /= divider; return *this; }
+    Point& operator-=(const Point& right)   { m_x -= right.m_x; m_y -= right.m_y; return *this; }
+    Point& operator/=(double divider)       { m_x /= divider;   m_y /= divider;   return *this; }
     
-    Point& operator+(const Point& right)    { return Point(*this) += right; }
+    friend Point operator+(const Point& left, const Point& right)    { return Point(left) += right; }
+    friend Point operator-(const Point& left, const Point& right)    { return Point(left) -= right; }
+
+
+    bool operator==(const Point& right) const { return std::abs(m_x - right.m_x) < k_epsilon && std::abs(m_y - right.m_y) < k_epsilon; }
+
+    // unused:
+    // bool operator!=(const Point2D& right) const { return !this->operator ==(right); }
+    // bool isZero() const { return *this == Point2D(0, 0); }
+
+    double getDistanceTo(const Point& other)     const { return std::sqrt(getSquareDistance(other)); }
+    double getSquareDistance(const Point& other) const { return pow2(m_x - other.m_x) + pow2(m_y - other.m_y); }  // sometimes we could compare Distance² with Radius² to omit expensive sqrt() and/or more expensive hypot()
 };
+
+__declspec(selectany) const double Point::k_epsilon = 0.0001;   // TODO - get epsilon from game system!
 
 typedef Point Vec2d;
 
@@ -48,9 +67,9 @@ struct Rect
         return !noOverlap;
     }
     
-    bool overlaps(const Rect& rect, Rect& intersection)
+    bool overlaps(const Rect& other, Rect& intersection)
     {
-        bool doesOverlap = overlaps(rect);
+        bool doesOverlap = overlaps(other);
         if(doesOverlap)
             intersection = Rect( {std::max(this->m_topLeft.m_x,     other.m_topLeft.m_x),     std::max(this->m_topLeft.m_y,     other.m_topLeft.m_y)}, 
                                  {std::min(this->m_bottomRight.m_x, other.m_bottomRight.m_x), std::min(this->m_bottomRight.m_y, other.m_bottomRight.m_y)});
@@ -90,7 +109,7 @@ struct VehicleGroup
             rect.ensureContains(unitPoint);
         }
             
-        center /= m_units.size();
+        center /= static_cast<double>(m_units.size());
 
         m_center = center;
         m_rect   = rect;
@@ -101,26 +120,39 @@ struct VehicleGroup
         Rect myNextRect    = Rect(m_rect.m_topLeft + thisSpeed,        m_rect.m_bottomRight + thisSpeed);
         Rect otherNextRect = Rect(other.m_rect.m_topLeft + otherSpeed, other.m_rect.m_bottomRight + otherSpeed);
         
-        return m_rect.overlaps(other) || myNextRect.overlaps(otherNextRect);            
+        return m_rect.overlaps(other.m_rect) || myNextRect.overlaps(otherNextRect);            
     }
 };
 
 struct State
 {
-    typedef std::map<int, VehiclePtr>                   VehicleByID;
-    typedef std::map<model::VehicleType, VehicleGroup>  GroupByType;
+    typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
+    typedef std::map<Id, VehiclePtr>                      VehicleByID;
+    typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;
 
     VehicleByID m_vehicles;
     GroupByType m_alliens;
     GroupByType m_teammates;
+    bool        m_isMoveComitted;
 
-    bool                  hasVehicleById(int id) const { return m_vehicles.find(id) != m_vehicles.end(); }
-    const model::Vehicle& vehicleById(int id)    const { return *m_vehicles.find(id)->second; }
-    model::Vehicle&       vehicleById(int id)          { return *m_vehicles.find(id)->second; }
+    const model::World*  m_world;
+    const model::Player* m_player;
+    const model::Game*   m_game;
+    model::Move*         m_move;
 
-    void update(const model::World& world, const model::Player& me)
+    bool                  hasVehicleById(Id id) const { return m_vehicles.find(id) != m_vehicles.end(); }
+    const model::Vehicle& vehicleById(Id id)    const { return *m_vehicles.find(id)->second; }
+    model::Vehicle&       vehicleById(Id id)          { return *m_vehicles.find(id)->second; }
+
+    void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)
     {
         assert(me.isMe());
+        m_world  = &world;
+        m_player = &me;
+        m_game   = &game;
+        m_move   = &move;
+
+        m_isMoveComitted = false;
 
         for (const model::Vehicle& v : world.getNewVehicles())
         {

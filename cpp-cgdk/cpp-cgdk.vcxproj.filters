@@ -81,6 +81,12 @@
     <ClCompile Include="model\VehicleUpdate.cpp">
       <Filter>Source Files\model</Filter>
     </ClCompile>
+    <ClCompile Include="goalManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="goalDefendHelicopter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyStrategy.h">
@@ -159,6 +165,18 @@
       <Filter>Header Files\model</Filter>
     </ClInclude>
     <ClInclude Include="state.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="goalManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="goal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="goalDefendHelicopter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="forwardDeclarations.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

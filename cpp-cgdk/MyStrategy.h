@@ -5,6 +5,7 @@
 
 #include "Strategy.h"
 #include "state.h"
+#include "goalManager.h"
 
 class MyStrategy : public Strategy {
 public:
@@ -13,7 +14,8 @@ public:
     void move(const model::Player& me, const model::World& world, const model::Game& game, model::Move& move) override;
 
 private:
-	State m_state;
+	State       m_state;
+    GoalManager m_goalManager;
 };
 
 #endif

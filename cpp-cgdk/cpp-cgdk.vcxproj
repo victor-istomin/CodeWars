@@ -165,10 +165,11 @@
       <PreprocessorDefinitions>_WINSOCK_DEPRECATED_NO_WARNINGS</PreprocessorDefinitions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <Optimization>Disabled</Optimization>
+      <Optimization>Custom</Optimization>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <AdditionalOptions>-Zo %(AdditionalOptions)</AdditionalOptions>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -184,6 +185,8 @@
     <ClCompile Include="csimplesocket\HTTPActiveSocket.cpp" />
     <ClCompile Include="csimplesocket\PassiveSocket.cpp" />
     <ClCompile Include="csimplesocket\SimpleSocket.cpp" />
+    <ClCompile Include="goalDefendHelicopter.cpp" />
+    <ClCompile Include="goalManager.cpp" />
     <ClCompile Include="model\CircularUnit.cpp" />
     <ClCompile Include="model\Facility.cpp" />
     <ClCompile Include="model\Game.cpp" />
@@ -206,6 +209,10 @@
     <ClInclude Include="csimplesocket\PassiveSocket.h" />
     <ClInclude Include="csimplesocket\SimpleSocket.h" />
     <ClInclude Include="csimplesocket\StatTimer.h" />
+    <ClInclude Include="forwardDeclarations.h" />
+    <ClInclude Include="goal.h" />
+    <ClInclude Include="goalDefendHelicopter.h" />
+    <ClInclude Include="goalManager.h" />
     <ClInclude Include="model\ActionType.h" />
     <ClInclude Include="model\CircularUnit.h" />
     <ClInclude Include="model\Facility.h" />
