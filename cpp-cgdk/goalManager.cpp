@@ -4,7 +4,7 @@
 
 void GoalManager::tick()
 {
-    if (m_state.m_world->getTickIndex() == 0)
+    if (m_state.world()->getTickIndex() == 0)
     {
         m_currentGoals.emplace_back(std::make_unique<goals::DefendHelicopters>(m_state));
     }

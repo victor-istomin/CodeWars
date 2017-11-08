@@ -57,7 +57,7 @@ public:
                 m_steps.pop_front();
                 
                 // proceed with next step is this one just finished without move
-                if (!state.m_isMoveComitted)
+                if (!state.isMoveCommitted())
                     performStep(state);
             }
             else

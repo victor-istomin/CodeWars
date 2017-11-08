@@ -16,23 +16,23 @@ namespace
 
 const VehicleGroup& goals::DefendHelicopters::ifvGroup(State& state)
 {
-    return state.m_teammates[model::VEHICLE_IFV];
+    return state.teammates(model::VEHICLE_IFV);
 }
 
 const VehicleGroup& goals::DefendHelicopters::helicopterGroup(State& state)
 {
-    return state.m_teammates[model::VEHICLE_HELICOPTER];
+    return state.teammates(model::VEHICLE_HELICOPTER);
 }
 
 goals::DefendHelicopters::DefendHelicopters(State& state)
 {
     auto abortCheck = [](State& state) 
     { 
-        assert(!state.m_isMoveComitted);   // conflict in move logic!
-        return state.m_world->getTickIndex() > MAX_DEFEND_TICK && !state.m_isMoveComitted;
+        assert(!state.isMoveCommitted());   // conflict in move logic!
+        return state.world()->getTickIndex() > MAX_DEFEND_TICK && !state.isMoveCommitted();
     };
 
-    auto shouldProceed     = [](State& state) { return state.m_player->getRemainingActionCooldownTicks() == 0; };
+    auto shouldProceed     = [](State& state) { return state.player()->getRemainingActionCooldownTicks() == 0; };
 
     auto selectHelicopters = [](State& state) 
     { 
@@ -47,7 +47,7 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
 
         Vec2d  path       = joinPoint - selfCenter;
         double distanceTo = selfCenter.getDistanceTo(joinPoint);
-        double eta        = distanceTo / state.m_game->getHelicopterSpeed();   // TODO : use correct prediction
+        double eta        = distanceTo / state.game()->getHelicopterSpeed();   // TODO : use correct prediction
 
         state.setMoveAction(path);
         return true;

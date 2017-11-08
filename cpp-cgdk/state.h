@@ -14,8 +14,9 @@
 #include "geometry.h"
 #include "VehicleGroup.h"
 
-struct State
+class State
 {
+
     typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
     typedef std::map<Id, VehiclePtr>                      VehicleByID;
     typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;
@@ -23,16 +24,28 @@ struct State
     VehicleByID m_vehicles;
     GroupByType m_alliens;
     GroupByType m_teammates;
-    bool        m_isMoveComitted;
+    bool        m_isMoveCommitted;
 
     const model::World*  m_world;
     const model::Player* m_player;
     const model::Game*   m_game;
     model::Move*         m_move;
 
+public:
+
     bool                  hasVehicleById(Id id) const { return m_vehicles.find(id) != m_vehicles.end(); }
     const model::Vehicle& vehicleById(Id id)    const { return *m_vehicles.find(id)->second; }
     model::Vehicle&       vehicleById(Id id)          { return *m_vehicles.find(id)->second; }
+
+    const model::World*  world()    const { return m_world; };
+    const model::Player* player()   const { return m_player; };
+    const model::Game*   game()     const { return m_game; };
+
+	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
+	const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
+
+    bool isMoveCommitted()          const { return m_isMoveCommitted; }
+
 
     void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)
     {
@@ -42,7 +55,7 @@ struct State
         m_game   = &game;
         m_move   = &move;
 
-        m_isMoveComitted = false;
+        m_isMoveCommitted = false;
 
         for (const model::Vehicle& v : world.getNewVehicles())
         {
@@ -82,7 +95,7 @@ struct State
         m_move->setBottom(rect.m_bottomRight.m_y);
         m_move->setRight(rect.m_bottomRight.m_x);
         
-        m_isMoveComitted = true;
+        m_isMoveCommitted = true;
     }
     
     void setMoveAction(const Vec2d& vector)
@@ -91,7 +104,7 @@ struct State
         m_move->setX(vector.m_x);
         m_move->setY(vector.m_y);
         
-        m_isMoveComitted = true;
+        m_isMoveCommitted = true;
     }
 };
 

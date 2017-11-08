@@ -8,8 +8,7 @@
 #include "model/Move.h"
 
 #include "goal.h"
-
-struct State;
+#include "forwardDeclarations.h"
 
 class GoalManager
 {

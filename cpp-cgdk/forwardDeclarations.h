@@ -9,7 +9,7 @@ namespace model
     class Move;
 }
 
-struct State;
+class State;
 struct VehicleGroup;
 
 
