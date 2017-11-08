@@ -10,6 +10,7 @@ namespace goals
     {
         static const VehicleGroup& ifvGroup(State& state);
         static const VehicleGroup& helicopterGroup(State& state);
+		static const VehicleGroup& fighterGroup(State& state);
 
     public:
         DefendHelicopters(State& state);

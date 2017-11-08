@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "model/Unit.h"
+#include "Vec.h"
 
 #undef max
 #undef min
@@ -21,17 +22,20 @@ struct Point
     Point& operator+=(const Point& right)   { m_x += right.m_x; m_y += right.m_y; return *this; }
     Point& operator-=(const Point& right)   { m_x -= right.m_x; m_y -= right.m_y; return *this; }
     Point& operator/=(double divider)       { m_x /= divider;   m_y /= divider;   return *this; }
+    Point& operator*=(double multiplier)    { m_x *= multiplier;m_y *= multiplier;return *this; }
     
     friend Point operator+(const Point& left, const Point& right)    { return Point(left) += right; }
     friend Point operator-(const Point& left, const Point& right)    { return Point(left) -= right; }
+	friend Point operator+(const Point& left, const Vec2d& right)    { return Point(left) += right.toPoint<Point>(); }
+	friend Point operator-(const Point& left, const Vec2d& right)    { return Point(left) -= right.toPoint<Point>(); }
+	friend Point operator*(const Point& left, double right)          { return Point(left) *= right; }
+	friend Point operator/(const Point& left, double right)          { return Point(left) /= right; }
 
     bool operator==(const Point& right) const { return std::abs(m_x - right.m_x) < k_epsilon && std::abs(m_y - right.m_y) < k_epsilon; }
 
     double getDistanceTo(const Point& other)     const { return std::sqrt(getSquareDistance(other)); }
     double getSquareDistance(const Point& other) const { return pow2(m_x - other.m_x) + pow2(m_y - other.m_y); }  // sometimes we could compare Distance² with Radius² to omit expensive sqrt() and/or more expensive hypot()
 };
-
-typedef Point Vec2d;
 
 struct Rect
 {
@@ -44,6 +48,9 @@ struct Rect
 	// check if rect overlaps with other one
 	bool overlaps(const Rect& other) const;
 	bool overlaps(const Rect& other, Rect& intersection) const;
+
+	double height() const { return std::abs(m_bottomRight.m_y - m_topLeft.m_y); }
+	double width()  const { return std::abs(m_bottomRight.m_x - m_topLeft.m_x); }
 
 	// ensure 'inside' point is actually inside rect 
 	void ensureContains(const Point& inside)

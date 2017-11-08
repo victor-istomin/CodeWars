@@ -13,10 +13,11 @@ class Goal
     
     struct Step
     {
+        const char* m_debugName;
+
         Callback    m_shouldAbort;
         Callback    m_shouldProceed;
         Callback    m_proceed;
-        const char* m_debugName;
         
         Step(Callback shouldAbort, Callback shouldProceed, Callback proceed, const char* debugName = nullptr)
             : m_shouldAbort(shouldAbort), m_shouldProceed(shouldProceed), m_proceed(proceed), m_debugName(debugName) {}
@@ -29,10 +30,19 @@ class Goal
 protected:
 
     template <typename... Args>
-    void addStep(Args&&... args)
+    void pushBackStep(Args&&... args)
     {
         return m_steps.emplace_back(std::make_unique<Step>( std::forward<Args>(args)... ));
     }
+
+	template <typename... Args>
+	void pushNextStep(Args&&... args)
+	{
+		if (m_steps.empty())
+			pushBackStep(std::forward<Args>(args)...);
+		else
+			m_steps.emplace(++m_steps.begin(), std::make_unique<Step>(std::forward<Args>(args)...));
+	}
     
 public:
     
