@@ -3,36 +3,35 @@
 #include <functional>
 #include <list>
 #include "forwardDeclarations.h"
+#include "state.h"
 
 class Goal
 {
+    struct Step;
     typedef std::function<bool(State&)> Callback;
+    typedef std::unique_ptr<Step>       StepPtr;
     
     struct Step
     {
         Callback    m_shouldAbort;
         Callback    m_shouldProceed;
         Callback    m_proceed;
-
         const char* m_debugName;
         
         Step(Callback shouldAbort, Callback shouldProceed, Callback proceed, const char* debugName = nullptr)
             : m_shouldAbort(shouldAbort), m_shouldProceed(shouldProceed), m_proceed(proceed), m_debugName(debugName) {}
     };        
         
-    typedef std::unique_ptr<Step> StepPtr;
-    typedef std::list<StepPtr>    Steps;
-    
-    Steps         m_steps;
-    const StepPtr m_nullStep;
+    std::list<StepPtr> m_steps;
     
     void abortGoal() { m_steps.clear(); }
     
 protected:
 
-    void addStep(Callback shouldAbort, Callback shouldProceed, Callback proceed, const char* debugName)
+    template <typename... Args>
+    void addStep(Args&&... args)
     {
-        return m_steps.emplace_back(std::make_unique<Step>(shouldAbort, shouldProceed, proceed, debugName));
+        return m_steps.emplace_back(std::make_unique<Step>( std::forward<Args>(args)... ));
     }
     
 public:
@@ -56,6 +55,10 @@ public:
             if (currentStep->m_proceed(state))
             {
                 m_steps.pop_front();
+                
+                // proceed with next step is this one just finished without move
+                if (!state.m_isMoveComitted)
+                    performStep(state);
             }
             else
             {

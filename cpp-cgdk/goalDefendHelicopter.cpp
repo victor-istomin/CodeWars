@@ -36,17 +36,7 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
 
     auto selectHelicopters = [](State& state) 
     { 
-        const Rect rect = helicopterGroup(state).m_rect;
-
-        state.m_move->setAction(ActionType::ACTION_CLEAR_AND_SELECT);
-        state.m_move->setVehicleType(VehicleType::VEHICLE_HELICOPTER);
-        
-        state.m_move->setTop(rect.m_topLeft.m_y);
-        state.m_move->setLeft(rect.m_topLeft.m_x);
-        state.m_move->setBottom(rect.m_bottomRight.m_y);
-        state.m_move->setRight(rect.m_bottomRight.m_x);
-
-        state.m_isMoveComitted = true;
+        state.setSelectAction(helicopterGroup(state).m_rect, VehicleType::VEHICLE_HELICOPTER);
         return true;
     };
 
@@ -55,14 +45,11 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
         const Point joinPoint  = ifvGroup(state).m_center;
         const Point selfCenter = helicopterGroup(state).m_center;
 
-        Point  path       = joinPoint - selfCenter;
+        Vec2d  path       = joinPoint - selfCenter;
         double distanceTo = selfCenter.getDistanceTo(joinPoint);
-        double eta        = distanceTo / state.m_game->getHelicopterSpeed();   // TODO : correct and use prediction
+        double eta        = distanceTo / state.m_game->getHelicopterSpeed();   // TODO : use correct prediction
 
-        state.m_move->setAction(ACTION_MOVE);
-        state.m_move->setX(path.m_x);
-        state.m_move->setY(path.m_y);
-        state.m_isMoveComitted = true;
+        state.setMoveAction(path);
         return true;
     };
 

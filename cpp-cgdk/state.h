@@ -10,6 +10,8 @@
 
 #include "model/World.h"
 #include "model/Player.h"
+#include "model/Move.h"
+#include "model/ActionType.h"
 
 #undef max
 #undef min
@@ -178,6 +180,30 @@ struct State
 
         for (auto& group : m_alliens)
             group.second.update();
+    }
+    
+    void setSelectAction(const Rect& rect, model::VehicleType vehicleType = model::_VEHICLE_UNKNOWN_)
+    {
+        m_move->setAction(model::ACTION_CLEAR_AND_SELECT);
+        
+        if (vehicleType != model::_VEHICLE_UNKNOWN_)
+            m_move->setVehicleType(vehicleType);
+        
+        m_move->setTop(rect.m_topLeft.m_y);
+        m_move->setLeft(rect.m_topLeft.m_x);
+        m_move->setBottom(rect.m_bottomRight.m_y);
+        m_move->setRight(rect.m_bottomRight.m_x);
+        
+        m_isMoveComitted = true;
+    }
+    
+    void setMoveAction(const Vec2d& vector)
+    {
+        m_move->setAction(model::ACTION_MOVE);
+        m_move->setX(vector.m_x);
+        m_move->setY(vector.m_y);
+        
+        m_isMoveComitted = true;
     }
 };
 
