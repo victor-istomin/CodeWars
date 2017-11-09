@@ -45,11 +45,12 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
 
     auto hasActionPoint = [](State& state) { return state.player()->getRemainingActionCooldownTicks() == 0; };
 
-
 	auto isPathToIfvFree = [](State& state)
 	{
-		const VehicleGroup& fighters  = fighterGroup(state);
-		const Point helicoptersCenter = helicopterGroup(state).m_center;
+		const VehicleGroup& fighters    = fighterGroup(state);
+        const VehicleGroup& helicopters = helicopterGroup(state);
+
+		const Point helicoptersCenter = helicopters.m_center;
 		const Point ifvCenter         = ifvGroup(state).m_center;
 		const Point fighterCenter     = fighters.m_center;
 
@@ -57,13 +58,16 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
 			Vec2d::fromPoint(fighterCenter - helicoptersCenter),
 			Vec2d::fromPoint(ifvCenter - helicoptersCenter)));
 
-		if (helicoptersCenter.getDistanceTo(fighterCenter) > helicoptersCenter.getDistanceTo(ifvCenter)
-			|| angleBetween >= (PI / 3 - Point::k_epsilon))
+		if (helicoptersCenter.getDistanceTo(fighterCenter) > helicoptersCenter.getDistanceTo(ifvCenter) || angleBetween > (PI / 2))
 		{
 			return true;   // mid-air collision is unlikely
 		}
 
-		return false;
+        const Rect& helicoptersRect = helicopters.m_rect;
+        const Rect& fightersRect = fighters.m_rect;
+
+        double iterationSize = std::min(state.constants().m_helicoprerRadius, state.game()->getHelicopterSpeed()) / 2;
+        return canMoveRectTo(helicoptersCenter, ifvCenter, helicoptersRect, fightersRect, iterationSize);
 	};
 
 	auto shiftAircraft = [abortCheck, hasActionPoint, isPathToIfvFree, this](State& state)
@@ -71,8 +75,10 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
 		if (isPathToIfvFree(state))
 			return true;  // nothing to move
 
-		const VehicleGroup& fighters  = fighterGroup(state);
-		const Point helicoptersCenter = helicopterGroup(state).m_center;
+		const VehicleGroup& fighters    = fighterGroup(state);
+        const VehicleGroup& helicopters = helicopterGroup(state);
+
+		const Point helicoptersCenter = helicopters.m_center;
 		const Point ifvCenter         = ifvGroup(state).m_center;
 		const Point fighterCenter     = fighters.m_center;
 
@@ -80,8 +86,8 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
 
 		state.setSelectAction(fighters.m_rect, VEHICLE_FIGHTER);
 
-		const double near = 1.1;
-		const double far = 1.1;
+		const double near = 1.2;
+		const double far  = 2.4;
 
 		Point solutions[] = { fighterCenter + (Point(fighters.m_rect.width(), 0)  * near),       // right
 							  fighterCenter + (Point(0, fighters.m_rect.height()) * near),       // down
@@ -102,13 +108,20 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
 							  fighterCenter + (Point(fighters.m_rect.width(), fighters.m_rect.height()) * far * far) }; // very far down and right
 
 		auto solutionIt = std::find_if(std::begin(solutions), std::end(solutions), 
-			[&helicoptersCenter, &ifvCenter, &fighterCenter, &fighters](const Point& solution) 
+			[&helicoptersCenter, &ifvCenter, &fighterCenter, &fighters, &helicopters, &state] (const Point& solution) 
 		{
 			double fightersSize = std::max(fighters.m_rect.width(), fighters.m_rect.height());
 
-			if (   solution.getDistanceTo(ifvCenter)         < fightersSize    // don't move over IFV
+            Vec2d solutionPath = Vec2d::fromPoint(solution - fighterCenter);
+            Rect  proposedRect = fighters.m_rect + solutionPath;
+
+			if (   proposedRect.m_topLeft.m_x < 0
+                || proposedRect.m_topLeft.m_y < 0
+                || solution.getDistanceTo(ifvCenter)         < fightersSize    // don't move over IFV
 				|| solution.getDistanceTo(helicoptersCenter) < fightersSize )  // ... or helicopters
+            { 
 				return false;
+            }
 
 			Vec2d fighter2helics   = Vec2d::fromPoint(helicoptersCenter - fighterCenter);
 			Vec2d fighter2solution = Vec2d::fromPoint(solution          - fighterCenter);
@@ -116,9 +129,11 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
 			Vec2d helics2fighter   = Vec2d::fromPoint(fighterCenter - helicoptersCenter);
 			Vec2d helics2solution  = Vec2d::fromPoint(solution      - helicoptersCenter);
 
-			return std::abs(Vec2d::angleBetween(fighter2helics, fighter2solution)) >= (PI / 3 - Point::k_epsilon)
-				&& ( std::abs(Vec2d::angleBetween(helics2fighter, helics2solution)) >= (PI / 3 - Point::k_epsilon)
-					|| helicoptersCenter.getDistanceTo(solution) > helicoptersCenter.getDistanceTo(ifvCenter));
+            double iterationSize = std::min(state.constants().m_helicoprerRadius, state.game()->getHelicopterSpeed()) / 2;
+
+
+            return canMoveRectTo(helicoptersCenter, ifvCenter, helicopters.m_rect, fighters.m_rect + solutionPath, iterationSize)
+                && canMoveRectTo(fighterCenter,     solution,  fighters.m_rect,    helicopters.m_rect,             iterationSize);
 		});
 
 		const Point solution    = solutionIt != std::end(solutions) ? *solutionIt : *std::rbegin(solutions);
@@ -158,5 +173,21 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
     pushBackStep(abortCheck, hasActionPoint, moveToJoinPoint,   "move helicopters to IFV");
 }
 
+bool DefendHelicopters::canMoveRectTo(const Point& from, const Point& to, const Rect& fromRect, const Rect& obstacleRect, double iterationSize)
+{
+    // TODO - it's possible to perform more careful check
+    Vec2d direction = Vec2d::fromPoint(to - from).truncate(iterationSize);
+    int stepsTotal = static_cast<int>(std::ceil(from.getDistanceTo(to) / iterationSize));
+
+    bool isPathFree = true;
+
+    for (int i = 0; i < stepsTotal && isPathFree; ++i)
+    {
+        Rect destination = fromRect + direction * i * iterationSize;
+        isPathFree = !destination.overlaps(obstacleRect);
+    }
+
+    return isPathFree;
+}
 
 

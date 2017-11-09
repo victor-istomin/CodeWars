@@ -14,6 +14,8 @@
 #include "geometry.h"
 #include "VehicleGroup.h"
 
+
+
 class State
 {
 
@@ -31,7 +33,19 @@ class State
     const model::Game*   m_game;
     model::Move*         m_move;
 
+    struct Constants;
+    std::unique_ptr<Constants> m_constants;
+
+    struct Constants
+    {
+        double m_helicoprerRadius;
+
+        Constants(double helicopterRadius) : m_helicoprerRadius(helicopterRadius) {}
+    };
+
 public:
+
+    Constants& constants() { return *m_constants; }    
 
     bool                  hasVehicleById(Id id) const { return m_vehicles.find(id) != m_vehicles.end(); }
     const model::Vehicle& vehicleById(Id id)    const { return *m_vehicles.find(id)->second; }
@@ -54,6 +68,14 @@ public:
         m_player = &me;
         m_game   = &game;
         m_move   = &move;
+
+        if (!m_constants)
+        {
+            auto itHelicopter = std::find_if(m_world->getNewVehicles().begin(), m_world->getNewVehicles().end(), [](const model::Vehicle& v) { return v.getType() == model::VEHICLE_HELICOPTER; });
+            double helicopterRadius = itHelicopter != m_world->getNewVehicles().end() ? itHelicopter->getRadius() : 2;
+
+            m_constants = std::make_unique<Constants>(helicopterRadius);
+        }
 
         m_isMoveCommitted = false;
 

@@ -58,5 +58,8 @@ struct Rect
 		m_topLeft     = Point(std::min(m_topLeft.m_x, inside.m_x), std::min(m_topLeft.m_y, inside.m_y));
 		m_bottomRight = Point(std::max(m_bottomRight.m_x, inside.m_x), std::max(m_bottomRight.m_y, inside.m_y));
 	}
+
+    Rect& operator+=(const Vec2d& v)                 { m_topLeft += v.toPoint<Point>(); m_bottomRight += v.toPoint<Point>(); return *this; }
+    friend Rect operator+(Rect rect, const Vec2d& v) { return rect += v; }
 };
 
