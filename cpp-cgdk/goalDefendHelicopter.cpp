@@ -89,7 +89,9 @@ goals::DefendHelicopters::DefendHelicopters(State& state)
 		const double near = 1.2;
 		const double far  = 2.4;
 
-		Point solutions[] = { fighterCenter + (Point(fighters.m_rect.width(), 0)  * near),       // right
+		Point solutions[] = { state.teammates(VEHICLE_TANK).m_center,                            // it's fine idea to defend tanks
+
+                              fighterCenter + (Point(fighters.m_rect.width(), 0)  * near),       // right
 							  fighterCenter + (Point(0, fighters.m_rect.height()) * near),       // down
 							  fighterCenter - (Point(fighters.m_rect.width(), 0)  * near),       // left
 							  fighterCenter - (Point(0, fighters.m_rect.height()) * near),       // up
