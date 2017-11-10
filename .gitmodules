@@ -1,0 +1,9 @@
+[submodule "cpp-cgdk-SDK"]
+	path = cpp-cgdk-SDK
+	url = git@github.com:Russian-AI-Cup-2017/cpp-cgdk.git
+[submodule "local-runner-ru"]
+	path = local-runner-ru
+	url = git@github.com:Russian-AI-Cup-2017/local-runner-ru.git
+[submodule "Tutorial"]
+	path = Tutorial
+	url = git@github.com:Russian-AI-Cup-2017/Tutorial.git
