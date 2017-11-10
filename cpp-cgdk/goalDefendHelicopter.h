@@ -9,13 +9,14 @@ namespace goals
 {
     class DefendHelicopters : public Goal
     {
-        const int MAX_DEFEND_TICK = 500;
+        const int MAX_DEFEND_TICK = 3500;
 
         const VehicleGroup& ifvGroup();
         const VehicleGroup& tankGroup();
         const VehicleGroup& helicopterGroup();
         const VehicleGroup& fighterGroup();
         const VehicleGroup& allienFighters();
+		const VehicleGroup& allienHelicopters();
 
         static bool canMoveRectTo(const Point& from, const Point& to, Rect fromRect, Rect obstacleRect, double iterationSize);
 
