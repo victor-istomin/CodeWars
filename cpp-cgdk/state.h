@@ -71,7 +71,8 @@ public:
 
         if (!m_constants)
         {
-            auto itHelicopter = std::find_if(m_world->getNewVehicles().begin(), m_world->getNewVehicles().end(), [](const model::Vehicle& v) { return v.getType() == model::VEHICLE_HELICOPTER; });
+            auto itHelicopter = std::find_if(m_world->getNewVehicles().begin(), m_world->getNewVehicles().end(), 
+				[](const model::Vehicle& v) { return v.getType() == model::VehicleType::HELICOPTER; });
             double helicopterRadius = itHelicopter != m_world->getNewVehicles().end() ? itHelicopter->getRadius() : 2;
 
             m_constants = std::make_unique<Constants>(helicopterRadius);
@@ -105,11 +106,11 @@ public:
             group.second.update();
     }
     
-    void setSelectAction(const Rect& rect, model::VehicleType vehicleType = model::_VEHICLE_UNKNOWN_)
+    void setSelectAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_)
     {
-        m_move->setAction(model::ACTION_CLEAR_AND_SELECT);
+        m_move->setAction(model::ActionType::CLEAR_AND_SELECT);
         
-        if (vehicleType != model::_VEHICLE_UNKNOWN_)
+        if (vehicleType != model::VehicleType::_UNKNOWN_)
             m_move->setVehicleType(vehicleType);
         
         m_move->setTop(rect.m_topLeft.m_y);
@@ -122,7 +123,7 @@ public:
     
     void setMoveAction(const Vec2d& vector)
     {
-        m_move->setAction(model::ACTION_MOVE);
+        m_move->setAction(model::ActionType::MOVE);
         m_move->setX(vector.m_x);
         m_move->setY(vector.m_y);
         

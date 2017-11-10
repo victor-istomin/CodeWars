@@ -18,32 +18,32 @@ using namespace model;
 
 const VehicleGroup& DefendHelicopters::ifvGroup()
 {
-    return state().teammates(model::VEHICLE_IFV);
+    return state().teammates(model::VehicleType::IFV);
 }
 
 const VehicleGroup& DefendHelicopters::helicopterGroup()
 {
-    return state().teammates(model::VEHICLE_HELICOPTER);
+    return state().teammates(model::VehicleType::HELICOPTER);
 }
 
 const VehicleGroup& DefendHelicopters::fighterGroup()
 {
-    return state().teammates(model::VEHICLE_FIGHTER);
+    return state().teammates(model::VehicleType::FIGHTER);
 }
 
 const VehicleGroup& DefendHelicopters::tankGroup()
 {
-    return state().teammates(model::VEHICLE_TANK);
+    return state().teammates(model::VehicleType::TANK);
 }
 
 const VehicleGroup& DefendHelicopters::allienFighters()
 {
-    return state().alliens(VEHICLE_FIGHTER);
+    return state().alliens(VehicleType::FIGHTER);
 }
 
 const VehicleGroup& goals::DefendHelicopters::allienHelicopters()
 {
-	return state().alliens(VEHICLE_HELICOPTER);
+	return state().alliens(VehicleType::HELICOPTER);
 }
 
 bool DefendHelicopters::isPathFree(const VehicleGroup& group, const Point& to, const VehicleGroup& obstacle, double iterationSize)
@@ -85,7 +85,7 @@ DefendHelicopters::DefendHelicopters(State& state)
 
         // select and move fighters in order to avoid mid-air collision
 
-        this->state().setSelectAction(fighters.m_rect, VEHICLE_FIGHTER);
+        this->state().setSelectAction(fighters.m_rect, VehicleType::FIGHTER);
 
         const double near = 1.2;
         const double far  = 2.4;
@@ -143,7 +143,7 @@ DefendHelicopters::DefendHelicopters(State& state)
         return true;
     };
 
-    auto selectHelicopters = [this]() { this->state().setSelectAction(helicopterGroup().m_rect, VEHICLE_HELICOPTER); return true; };
+    auto selectHelicopters = [this]() { this->state().setSelectAction(helicopterGroup().m_rect, VehicleType::HELICOPTER); return true; };
 
     auto moveToJoinPoint = [this]()
     {
@@ -230,7 +230,7 @@ DefendHelicopters::DefendHelicopters(State& state)
         return true;
     };
 
-    auto selectFighters = [this]() { this->state().setSelectAction(fighterGroup().m_rect, VEHICLE_FIGHTER); return true; };
+    auto selectFighters = [this]() { this->state().setSelectAction(fighterGroup().m_rect, VehicleType::FIGHTER); return true; };
     auto helicoptersReady = [this, hasActionPointFn]() 
     { 
         double distanceToIfv = Vec2d(helicopterGroup().m_center - ifvGroup().m_center).length();
@@ -267,7 +267,7 @@ DefendHelicopters::DefendHelicopters(State& state)
 	auto doSelect = [this](const VehicleGroup& group, VehicleType type) { this->state().setSelectAction(group.m_rect, type); return true; };
 
 	auto isRFA_Fighters   = [this, isReadyForAttack]() { return isReadyForAttack(fighterGroup(), allienFighters()); };
-	auto doSelectFighters = [this, doSelect]()         { return doSelect(this->fighterGroup(), model::VEHICLE_FIGHTER); };
+	auto doSelectFighters = [this, doSelect]()         { return doSelect(this->fighterGroup(), model::VehicleType::FIGHTER); };
 	auto doAttackFighters = [this, doAttack]()         { return doAttack(this->fighterGroup(), allienFighters(), 0); };
 
 	const int nActionsGap = 20; // don't spend all actions at once
