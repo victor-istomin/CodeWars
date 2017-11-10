@@ -14,19 +14,6 @@ void MyStrategy::move(const Player& me, const World& world, const Game& game, Mo
     m_state.update(world, me, game, move);
 
     m_goalManager.tick();
-
-//     if (world.getTickIndex() == 0) {
-//         move.setAction(ACTION_CLEAR_AND_SELECT);
-//         move.setRight(world.getWidth());
-//         move.setBottom(world.getHeight());
-//         return;
-//     }
-// 
-//     if (world.getTickIndex() == 1) {
-//         move.setAction(ACTION_MOVE);
-//         move.setX(world.getWidth() / 2.0);
-//         move.setY(world.getHeight() / 2.0);
-//     }
 }
 
 MyStrategy::MyStrategy()

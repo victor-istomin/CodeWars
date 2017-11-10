@@ -4,17 +4,26 @@ const double Point::k_epsilon = 0.0001;   // TODO - get epsilon from game system
 
 bool Rect::overlaps(const Rect& other) const
 {
-	bool noOverlap = this->m_topLeft.m_x > other.m_bottomRight.m_x || other.m_topLeft.m_x > this->m_bottomRight.m_x
-	              || this->m_topLeft.m_y > other.m_bottomRight.m_y || other.m_topLeft.m_y > this->m_bottomRight.m_y;
+    bool noOverlap = this->m_topLeft.m_x > other.m_bottomRight.m_x || other.m_topLeft.m_x > this->m_bottomRight.m_x
+                  || this->m_topLeft.m_y > other.m_bottomRight.m_y || other.m_topLeft.m_y > this->m_bottomRight.m_y;
 
-	return !noOverlap;
+    return !noOverlap;
 }
 
 bool Rect::overlaps(const Rect& other, Rect& intersection) const
 {
-	bool doesOverlap = overlaps(other);
-	if (doesOverlap)
-		intersection = Rect({ std::max(this->m_topLeft.m_x,     other.m_topLeft.m_x),     std::max(this->m_topLeft.m_y,     other.m_topLeft.m_y) },
-	                        { std::min(this->m_bottomRight.m_x, other.m_bottomRight.m_x), std::min(this->m_bottomRight.m_y, other.m_bottomRight.m_y) });
-	return doesOverlap;
+    bool doesOverlap = overlaps(other);
+    if (doesOverlap)
+    {
+        intersection = Rect({ std::max(this->m_topLeft.m_x,     other.m_topLeft.m_x),     std::max(this->m_topLeft.m_y,     other.m_topLeft.m_y) },
+                            { std::min(this->m_bottomRight.m_x, other.m_bottomRight.m_x), std::min(this->m_bottomRight.m_y, other.m_bottomRight.m_y) });
+    }
+
+    return doesOverlap;
+}
+
+void Rect::ensureContains(const Point& inside)
+{
+    m_topLeft     = Point(std::min(m_topLeft.m_x, inside.m_x),     std::min(m_topLeft.m_y, inside.m_y));
+    m_bottomRight = Point(std::max(m_bottomRight.m_x, inside.m_x), std::max(m_bottomRight.m_y, inside.m_y));
 }
