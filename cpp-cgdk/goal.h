@@ -8,8 +8,8 @@
 class Goal
 {
     struct Step;
-    typedef std::function<bool(State&)> Callback;
-    typedef std::unique_ptr<Step>       StepPtr;
+    typedef std::function<bool()> Callback;
+    typedef std::unique_ptr<Step> StepPtr;
 
     struct Step
     {
@@ -24,6 +24,7 @@ class Goal
     };
 
     std::list<StepPtr> m_steps;
+    State&             m_state;
 
     void abortGoal() { m_steps.clear(); }
 
@@ -44,31 +45,35 @@ protected:
             m_steps.emplace(++m_steps.begin(), std::make_unique<Step>(std::forward<Args>(args)...));
     }
 
+    State& state() { return m_state; }
+
 public:
+
+    Goal(State& state) : m_state(state)  {}
 
     bool inProgress() { return !m_steps.empty(); }
 
-    void performStep(State& state)
+    void performStep()
     {
         if (!inProgress())
             return;
 
         const StepPtr& currentStep = m_steps.front();
-        if (currentStep->m_shouldAbort(state))
+        if (currentStep->m_shouldAbort())
         {
             abortGoal();
             return;
         }
 
-        if (currentStep->m_shouldProceed(state))
+        if (currentStep->m_shouldProceed())
         {
-            if (currentStep->m_proceed(state))
+            if (currentStep->m_proceed())
             {
                 m_steps.pop_front();
 
                 // proceed with next step is this one just finished without move
-                if (!state.isMoveCommitted())
-                    performStep(state);
+                if (!m_state.isMoveCommitted())
+                    performStep();
             }
             else
             {

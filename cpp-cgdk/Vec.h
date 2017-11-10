@@ -12,6 +12,7 @@ public:
     Vec2d(double x, double y)     : m_x(x), m_y(y) {}
     Vec2d(const Vec2d& v)         : m_x(v.m_x), m_y(v.m_y) {}
 
+    template <typename Point> Vec2d(const Point& p)                  : m_x(p.m_x), m_y(p.m_y)   {}
     template <typename Point> static Vec2d fromPoint(const Point& p) { return Vec2d(p.m_x, p.m_y); }
     template <typename Point>        Point toPoint() const           { return Point(m_x, m_y); }
 

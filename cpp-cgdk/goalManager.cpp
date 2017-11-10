@@ -11,7 +11,7 @@ void GoalManager::tick()
 
     if (!m_currentGoals.empty())
     {
-        m_currentGoals.front()->performStep(m_state);
+        m_currentGoals.front()->performStep();
         if (!m_currentGoals.front()->inProgress())
             m_currentGoals.pop_front();
     }
