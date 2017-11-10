@@ -19,5 +19,11 @@ struct VehicleGroup
     void update();
     
     bool mayIntersect(const VehicleGroup& other, const Vec2d& thisSpeed, const Vec2d& otherSpeed) const;
+
+    VehicleGroup getGhost(const Vec2d& displacement) const
+    {
+        // TODO - safe code using inherited VehicleGroupGhost!!!
+        return VehicleGroup{ std::vector<VehicleCache>(), m_center + displacement, m_rect + displacement };
+    }
 };
 

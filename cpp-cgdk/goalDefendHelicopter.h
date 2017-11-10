@@ -15,8 +15,9 @@ namespace goals
         const VehicleGroup& tankGroup();
         const VehicleGroup& helicopterGroup();
         const VehicleGroup& fighterGroup();
+        const VehicleGroup& allienFighters();
 
-        static bool canMoveRectTo(const Point& from, const Point& to, const Rect& fromRect, const Rect& obstacleRect, double iterationSize);
+        static bool canMoveRectTo(const Point& from, const Point& to, Rect fromRect, Rect obstacleRect, double iterationSize);
 
         static bool isPathFree(const VehicleGroup& group, const Point& to, const VehicleGroup& obstacle, double iterationSize);
 
