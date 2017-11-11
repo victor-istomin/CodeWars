@@ -21,16 +21,7 @@ namespace goals
 
         struct DoNothing { bool operator()() { return true; } };
 
-        const VehicleGroup& ifvGroup();
-        const VehicleGroup& tankGroup();
-        const VehicleGroup& helicopterGroup();
-        const VehicleGroup& fighterGroup();
-        const VehicleGroup& allienFighters();
-		const VehicleGroup& allienHelicopters();
-
-        static bool canMoveRectTo(const Point& from, const Point& to, Rect fromRect, Rect obstacleRect, double iterationSize);
-
-        static bool isPathFree(const VehicleGroup& group, const Point& to, const VehicleGroup& obstacle, double iterationSize);
+//         static bool isPathFree(const VehicleGroup& group, const Point& to, const VehicleGroup& obstacle, double iterationSize);
 
         bool abortCheck();
         bool hasActionPoint()               { return state().player()->getRemainingActionCooldownTicks() == 0; }

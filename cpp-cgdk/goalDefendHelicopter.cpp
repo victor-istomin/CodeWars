@@ -16,36 +16,6 @@ using namespace goals;
 using namespace model;
 
 
-const VehicleGroup& DefendHelicopters::ifvGroup()
-{
-    return state().teammates(model::VehicleType::IFV);
-}
-
-const VehicleGroup& DefendHelicopters::helicopterGroup()
-{
-    return state().teammates(model::VehicleType::HELICOPTER);
-}
-
-const VehicleGroup& DefendHelicopters::fighterGroup()
-{
-    return state().teammates(model::VehicleType::FIGHTER);
-}
-
-const VehicleGroup& DefendHelicopters::tankGroup()
-{
-    return state().teammates(model::VehicleType::TANK);
-}
-
-const VehicleGroup& DefendHelicopters::allienFighters()
-{
-    return state().alliens(VehicleType::FIGHTER);
-}
-
-const VehicleGroup& goals::DefendHelicopters::allienHelicopters()
-{
-	return state().alliens(VehicleType::HELICOPTER);
-}
-
 bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackWith, const VehicleGroup& attackTarget)
 {
     if (attackWith.m_units.empty() || attackTarget.m_units.empty())
@@ -54,8 +24,10 @@ bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, c
     const Rect& attackRect = attackTarget.m_rect;
 
     static const double sqrt2 = std::sqrt(2);
-    double aerialAttackRange = attackWith.m_units.front().lock()->getAerialAttackRange();
-    double radius = attackWith.m_units.front().lock()->getRadius();
+    VehiclePtr firstUnit = attackWith.m_units.front().lock();
+
+    double aerialAttackRange = firstUnit->getAerialAttackRange();
+    double radius = firstUnit->getRadius();
 
     const Point& displacement1 = Point(  aerialAttackRange - radius,  aerialAttackRange - radius) / sqrt2;
     const Point& displacement2 = Point(-(aerialAttackRange - radius), aerialAttackRange - radius) / sqrt2;
@@ -76,14 +48,14 @@ bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, c
     const VehicleGroup& obstacle = helicopterGroup();  // <-- TODO generalize! 
 
     std::stable_partition(std::begin(attackPoints), std::end(attackPoints),
-        [this, &attackWith, &obstacle](const Point& p) { return isPathFree(attackWith, p, obstacle, m_helicopterIteration); });
+        [this, &attackWith, &obstacle](const Point& p) { return attackWith.isPathFree(p, obstacle, m_helicopterIteration); });
 
     const Point& destination = attackPoints[0];
     Vec2d path = destination - attackWith.m_center;
     state().setMoveAction(path);
 
     static const int MIN_TICKS_GAP = 10;
-    int nTicksGap = std::max(MIN_TICKS_GAP, static_cast<int>(path.length() / attackWith.m_units.front().lock()->getMaxSpeed() / 4));
+    int nTicksGap = std::max(MIN_TICKS_GAP, static_cast<int>(path.length() / firstUnit->getMaxSpeed() / 4));
 
     pushBackStep(shouldAbort, WaitSomeTicks{ nTicksGap }, DoNothing(), "wait next attack");
     pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicopters::doAttack, this, shouldAbort, shouldProceed, std::cref(attackWith), std::cref(attackTarget)), "attack again");
@@ -96,30 +68,14 @@ bool DefendHelicopters::abortCheck()
     return state().world()->getTickIndex() > MAX_DEFEND_TICK || isFightersBeaten;
 }
 
-bool DefendHelicopters::isPathFree(const VehicleGroup& group, const Point& to, const VehicleGroup& obstacle, double iterationSize)
-{
-    const Point& groupCenter    = group.m_center;
-    const Point& obstacleCenter = obstacle.m_center;
-
-    // TODO: get angle between closest rect corners, not between centers
-    double angleBetween = std::abs(Vec2d::angleBetween((to - groupCenter), (obstacleCenter - groupCenter)));
-
-    if (groupCenter.getDistanceTo(obstacleCenter) > groupCenter.getDistanceTo(to) || angleBetween > (PI / 2))
-    {
-        return true;   // mid-air collision is unlikely
-    }
-
-    return canMoveRectTo(groupCenter, to, group.m_rect, obstacle.m_rect, iterationSize);
-}
-
 DefendHelicopters::DefendHelicopters(State& state)
     : Goal(state)
     , m_helicopterIteration(std::min(state.constants().m_helicoprerRadius, state.game()->getHelicopterSpeed()) / 2)
 {
     auto abortCheckFn     = [this]() { return abortCheck(); };
-    auto hasActionPointFn = [this]() { return hasActionPoint(); };
+    auto hasActionPointFn = [this]() { return this->state().hasActionPoint(); };
 
-    auto isPathToIfvFree  = [this]() { return isPathFree(helicopterGroup(), ifvGroup().m_center, fighterGroup(), m_helicopterIteration); };
+    auto isPathToIfvFree  = [this]() { return helicopterGroup().isPathFree(ifvGroup().m_center, fighterGroup(), m_helicopterIteration); };
 
     auto shiftAircraft    = [isPathToIfvFree, abortCheckFn, hasActionPointFn, this]()
     {
@@ -180,9 +136,10 @@ DefendHelicopters::DefendHelicopters(State& state)
 
             Vec2d helics2fighter   = Vec2d::fromPoint(fighterCenter - helicoptersCenter);
             Vec2d helics2solution  = Vec2d::fromPoint(solution - helicoptersCenter);
-
-            return canMoveRectTo(helicoptersCenter, ifvCenter, helicopters.m_rect, fighters.m_rect + solutionPath, m_helicopterIteration)
-                && canMoveRectTo(fighterCenter, solution, fighters.m_rect, helicopters.m_rect, m_helicopterIteration);
+            
+            // TODO - refactor to isPathFree
+            return VehicleGroup::canMoveRectTo(helicoptersCenter, ifvCenter, helicopters.m_rect, fighters.m_rect + solutionPath, m_helicopterIteration)
+                && VehicleGroup::canMoveRectTo(fighterCenter, solution, fighters.m_rect, helicopters.m_rect, m_helicopterIteration);
         });
 
         const Point solution    = solutionIt != std::end(solutions) ? *solutionIt : *std::rbegin(solutions);
@@ -221,7 +178,7 @@ DefendHelicopters::DefendHelicopters(State& state)
         Vec2d pathFromHelicopters = Vec2d(allienFighters().m_center - helicopterGroup().m_center).normalize() * fighterGroup().m_rect.height() * 1.8;
         Point defendDestination   = helicopters.m_center + pathFromHelicopters.toPoint<Point>();
 
-        if (isPathFree(fighters, defendDestination, helicopters, m_helicopterIteration))
+        if (fighters.isPathFree(defendDestination, helicopters, m_helicopterIteration))
         {
             this->state().setMoveAction(defendDestination - fighters.m_center);
         }
@@ -254,8 +211,8 @@ DefendHelicopters::DefendHelicopters(State& state)
                 VehicleGroup fightersGhost = fighters.getGhost(dFighters);
 
                 return tmpPos.m_x > 0 && tmpPos.m_y > 0
-                    && isPathFree(fighters, tmpPos, helicopters, m_helicopterIteration)
-                    && isPathFree(fightersGhost, defendDestination, helicopters, m_helicopterIteration);
+                    && fighters.isPathFree(tmpPos, helicopters, m_helicopterIteration)
+                    && fightersGhost.isPathFree(defendDestination, helicopters, m_helicopterIteration);
             });
 
             if (solutionIt != std::end(solutions))
@@ -270,7 +227,7 @@ DefendHelicopters::DefendHelicopters(State& state)
                 { 
                     return hasActionPointFn() 
                         && fighterGroup().m_center.getDistanceTo(tmpPoint) < 1
-                        && isPathFree(fighterGroup(), defendDestination, helicopterGroup(), m_helicopterIteration); 
+                        && fighterGroup().isPathFree(defendDestination, helicopterGroup(), m_helicopterIteration);
                 };
 
                 this->pushNextStep(abortCheckFn, ready, [this, finalPath]() { this->state().setMoveAction(finalPath); return true; }, "fighter: defend helicopters");
@@ -328,23 +285,6 @@ DefendHelicopters::DefendHelicopters(State& state)
     };
 
 	pushBackStep(abortCheckFn, shouldStartAttack, doAttackFighters, "fighter: start attacking enemy fighters");
-}
-
-bool DefendHelicopters::canMoveRectTo(const Point& from, const Point& to, Rect fromRect, Rect obstacleRect, double iterationSize)
-{
-    // TODO - it's possible to perform more careful check
-    Vec2d direction = Vec2d::fromPoint(to - from).truncate(iterationSize);
-    int stepsTotal = static_cast<int>(std::ceil(from.getDistanceTo(to) / iterationSize));
-
-    bool isPathFree = true;
-
-    for (int i = 0; i < stepsTotal && isPathFree; ++i)
-    {
-        Rect destination = fromRect + direction * i * iterationSize;
-        isPathFree = !destination.overlaps(obstacleRect);
-    }
-
-    return isPathFree;
 }
 
 

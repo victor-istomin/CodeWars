@@ -58,7 +58,8 @@ public:
 	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
 	const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
 
-    bool isMoveCommitted()          const { return m_isMoveCommitted; }
+    bool isMoveCommitted() const                                 { return m_isMoveCommitted; }
+    bool hasActionPoint() const                                  { return player()->getRemainingActionCooldownTicks() == 0; }
 
 
     void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)

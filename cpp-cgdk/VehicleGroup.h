@@ -19,6 +19,9 @@ struct VehicleGroup
 
     void update();
     
+    bool isPathFree(const Point& to, const VehicleGroup& obstacle, double iterationSize) const;
+    static bool canMoveRectTo(const Point& from, const Point& to, const Rect& fromRect, const Rect& obstacleRect, double iterationSize);
+
     bool mayIntersect(const VehicleGroup& other, const Vec2d& thisSpeed, const Vec2d& otherSpeed) const;
 
     VehicleGroup getGhost(const Vec2d& displacement) const

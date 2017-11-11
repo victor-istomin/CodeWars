@@ -50,9 +50,18 @@ protected:
 
     State& state() { return m_state; }
 
+    const VehicleGroup& ifvGroup()          const { return m_state.teammates(model::VehicleType::IFV); }
+    const VehicleGroup& tankGroup()         const { return m_state.teammates(model::VehicleType::TANK); }
+    const VehicleGroup& helicopterGroup()   const { return m_state.teammates(model::VehicleType::HELICOPTER); }
+    const VehicleGroup& fighterGroup()      const { return m_state.teammates(model::VehicleType::FIGHTER); }
+    const VehicleGroup& allienFighters()    const { return m_state.alliens(model::VehicleType::FIGHTER); }
+    const VehicleGroup& allienHelicopters() const { return m_state.alliens(model::VehicleType::HELICOPTER); }
+
+
 public:
 
     Goal(State& state) : m_state(state)  {}
+    virtual ~Goal()                      {}
 
     bool inProgress() { return !m_steps.empty(); }
 
