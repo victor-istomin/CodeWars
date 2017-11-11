@@ -45,6 +45,9 @@ struct Rect
     Rect(const Point& topLeft = Point(), const Point& bottomRight = Point())
         : m_topLeft(topLeft), m_bottomRight(bottomRight) {}
 
+    Point bottomLeft() const                               { return Point(m_topLeft.m_x, m_bottomRight.m_y); }
+    Point topRight()   const                               { return Point(m_bottomRight.m_x, m_topLeft.m_y); }
+
     // check if rect overlaps with other one
     bool overlaps(const Rect& other) const;
     bool overlaps(const Rect& other, Rect& intersection) const;
@@ -55,7 +58,7 @@ struct Rect
     // ensure 'inside' point is actually inside rect 
     void ensureContains(const Point& inside);
 
-    Rect inflate(int amount) const                         { return Rect(m_topLeft - Point(amount, amount), m_bottomRight + Point(amount, amount)); }
+    Rect inflate(double amount) const                      { return Rect(m_topLeft - Point(amount, amount), m_bottomRight + Point(amount, amount)); }
 
     Rect& operator+=(const Vec2d& v)                       { m_topLeft += v.toPoint<Point>(); m_bottomRight += v.toPoint<Point>(); return *this; }
     friend Rect operator+(Rect rect, const Vec2d& v)       { return rect += v; }

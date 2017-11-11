@@ -46,6 +46,56 @@ const VehicleGroup& goals::DefendHelicopters::allienHelicopters()
 	return state().alliens(VehicleType::HELICOPTER);
 }
 
+bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackWith, const VehicleGroup& attackTarget)
+{
+    if (attackWith.m_units.empty() || attackTarget.m_units.empty())
+        return true;   // do nothing if not possible to attach (don't block entire goal)
+
+    const Rect& attackRect = attackTarget.m_rect;
+
+    static const double sqrt2 = std::sqrt(2);
+    double aerialAttackRange = attackWith.m_units.front().lock()->getAerialAttackRange();
+    double radius = attackWith.m_units.front().lock()->getRadius();
+
+    const Point& displacement1 = Point(  aerialAttackRange - radius,  aerialAttackRange - radius) / sqrt2;
+    const Point& displacement2 = Point(-(aerialAttackRange - radius), aerialAttackRange - radius) / sqrt2;
+    const Point& displacement3 = Point(  aerialAttackRange - radius,  -(aerialAttackRange - radius)) / sqrt2;
+    const Point& displacement4 = Point(-(aerialAttackRange - radius), -(aerialAttackRange - radius)) / sqrt2;
+
+    Point attackPoints[] = 
+    { 
+        attackTarget.m_center, 
+        attackRect.m_topLeft, attackRect.m_bottomRight, attackRect.bottomLeft(), attackRect.topRight(),
+        attackRect.m_topLeft + displacement1, attackRect.m_bottomRight + displacement1, attackTarget.m_center + displacement1,
+        attackRect.bottomLeft() + displacement1, attackRect.topRight() + displacement1,
+    };
+
+    std::sort(std::begin(attackPoints), std::end(attackPoints), 
+        [&attackWith](const Point& left, const Point& right) { return attackWith.m_center.getSquareDistance(left) < attackWith.m_center.getSquareDistance(right); });
+
+    const VehicleGroup& obstacle = helicopterGroup();  // <-- TODO generalize! 
+
+    std::stable_partition(std::begin(attackPoints), std::end(attackPoints),
+        [this, &attackWith, &obstacle](const Point& p) { return isPathFree(attackWith, p, obstacle, m_helicopterIteration); });
+
+    const Point& destination = attackPoints[0];
+    Vec2d path = destination - attackWith.m_center;
+    state().setMoveAction(path);
+
+    static const int MIN_TICKS_GAP = 10;
+    int nTicksGap = std::max(MIN_TICKS_GAP, static_cast<int>(path.length() / attackWith.m_units.front().lock()->getMaxSpeed() / 4));
+
+    pushBackStep(shouldAbort, WaitSomeTicks{ nTicksGap }, DoNothing(), "wait next attack");
+    pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicopters::doAttack, this, shouldAbort, shouldProceed, std::cref(attackWith), std::cref(attackTarget)), "attack again");
+    return true;
+}
+
+bool DefendHelicopters::abortCheck()
+{
+    bool isFightersBeaten = state().alliens(VehicleType::FIGHTER).m_healthSum < (state().teammates(VehicleType::HELICOPTER).m_healthSum * MIN_HEALTH_FACTOR);
+    return state().world()->getTickIndex() > MAX_DEFEND_TICK || isFightersBeaten;
+}
+
 bool DefendHelicopters::isPathFree(const VehicleGroup& group, const Point& to, const VehicleGroup& obstacle, double iterationSize)
 {
     const Point& groupCenter    = group.m_center;
@@ -233,7 +283,7 @@ DefendHelicopters::DefendHelicopters(State& state)
     auto selectFighters = [this]() { this->state().setSelectAction(fighterGroup().m_rect, VehicleType::FIGHTER); return true; };
     auto helicoptersReady = [this, hasActionPointFn]() 
     { 
-        double distanceToIfv = Vec2d(helicopterGroup().m_center - ifvGroup().m_center).length();
+        double distanceToIfv = helicopterGroup().m_center.getDistanceTo(ifvGroup().m_center);
         return hasActionPointFn() && distanceToIfv < 1; 
     };
 
@@ -242,106 +292,42 @@ DefendHelicopters::DefendHelicopters(State& state)
 
 	const auto& fighters = fighterGroup();
 
-
 	auto isReadyForAttack = [this, hasActionPointFn](const VehicleGroup& attackWith, const VehicleGroup& attackTarget)
 	{ 
 		if (attackWith.m_units.empty() || attackTarget.m_units.empty())
-			return true;   // do nothing if not possible to attach (don't block entier goal)
+			return true;   // do nothing if not possible to attach (don't block entire goal)
 
-		VehiclePtr firstUnit = !attackWith.m_units.empty() ? attackWith.m_units.front().lock() : nullptr;
-		bool isAboutToBeReady   = nullptr != firstUnit && (firstUnit->getRemainingAttackCooldownTicks() <= firstUnit->getAttackCooldownTicks() / 3);
+        VehiclePtr firstUnit = attackWith.m_units.front().lock();
 
-		return hasActionPointFn() && isAboutToBeReady 
-			&& (attackWith.m_center.getDistanceTo(attackTarget.m_rect.m_topLeft) < 2 * attackWith.m_rect.width());
+        int minCooldownTicks = firstUnit->getRemainingAttackCooldownTicks();
+        for (const VehicleCache& nextUnit : attackWith.m_units)
+            minCooldownTicks = std::min(minCooldownTicks, nextUnit.lock()->getRemainingAttackCooldownTicks());
+
+        static const int PREPARE_TICKS = 10;
+        bool isAboutToBeReady = minCooldownTicks < PREPARE_TICKS;
+
+        return hasActionPointFn() && isAboutToBeReady;
 	};
 
-	auto doAttack = [this](const VehicleGroup& attackWith, const VehicleGroup& attackTarget, int dxdy)
-	{ 
-		if (attackWith.m_units.empty() || attackTarget.m_units.empty())
-			return true;   // do nothing if not possible to attach (don't block entier goal)
+    auto isNear = [](const VehicleGroup& attackWith, const VehicleGroup& attackTarget, double distanceLimit)
+    {
+        return attackWith.m_center.getDistanceTo(attackTarget.m_rect.m_topLeft) < distanceLimit;
+    };
 
-		this->state().setMoveAction(attackTarget.m_rect.m_topLeft - attackWith.m_center + Point(dxdy, dxdy));
-		return true; 
-	};
+	auto doAttackFighters = [this, abortCheckFn, isReadyForAttack]() 
+    { 
+        const VehicleGroup& attacker = fighterGroup();
+        const VehicleGroup& target   = allienFighters();
 
-	auto doSelect = [this](const VehicleGroup& group, VehicleType type) { this->state().setSelectAction(group.m_rect, type); return true; };
+        return doAttack(abortCheckFn, std::bind(isReadyForAttack, std::cref(attacker), std::cref(target)), attacker, target); 
+    };
+    
+    auto shouldStartAttack = [&isNear, &isReadyForAttack, this]()
+    {
+        return isNear(fighterGroup(), allienFighters(), 3 * fighterGroup().m_rect.width());
+    };
 
-	auto isRFA_Fighters   = [this, isReadyForAttack]() { return isReadyForAttack(fighterGroup(), allienFighters()); };
-	auto doSelectFighters = [this, doSelect]()         { return doSelect(this->fighterGroup(), model::VehicleType::FIGHTER); };
-	auto doAttackFighters = [this, doAttack]()         { return doAttack(this->fighterGroup(), allienFighters(), 0); };
-
-	const int nActionsGap = 20; // don't spend all actions at once
-
-	struct WaitSomeTicks 
-	{
-		int m_ticksRemaining; 
-		
-		bool operator()() { return m_ticksRemaining-- <= 0; }
-	};
-	
-
-	pushBackStep(abortCheckFn, isRFA_Fighters, doAttackFighters, "fighter: attack enemy fighters");
-	pushBackStep(abortCheckFn, WaitSomeTicks{ nActionsGap }, []() {return true; }, "wait some ticks");
-
-	pushBackStep(abortCheckFn, isRFA_Fighters, doAttackFighters, "fighter: attack enemy fighters");
-	pushBackStep(abortCheckFn, WaitSomeTicks{ nActionsGap }, []() {return true; }, "wait some ticks");
-
-	pushBackStep(abortCheckFn, isRFA_Fighters, doAttackFighters, "fighter: attack enemy fighters");
-	pushBackStep(abortCheckFn, WaitSomeTicks{ nActionsGap }, []() {return true; }, "wait some ticks");
-
-	pushBackStep(abortCheckFn, isRFA_Fighters, doAttackFighters, "fighter: attack enemy fighters");
-	pushBackStep(abortCheckFn, WaitSomeTicks{ nActionsGap }, []() {return true; }, "wait some ticks");
-
-	pushBackStep(abortCheckFn, hasActionPointFn, prepareAircraft, "fighter: return to defend pos");
-	pushBackStep(abortCheckFn, WaitSomeTicks{ nActionsGap }, []() {return true; }, "wait some ticks");
-
-	/**/
-	auto doAttackFighters2Helics = [this, doAttack]() 
-	{ 
-		return doAttack(fighterGroup(), allienHelicopters(), 15);
-	};
-	
-	auto doAttackHelics2Helics   = [this, doAttack]() 
-	{ 
-		return doAttack(helicopterGroup(), allienHelicopters(), -25); 
-	};
-
-	pushBackStep(abortCheckFn, hasActionPointFn, doAttackFighters2Helics, "fighter: attack enemy helicopters");
-
-	pushBackStep(abortCheckFn, hasActionPointFn, selectHelicopters,     "select helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, doAttackHelics2Helics, "helicopters: attack enemy helicopters");
-
-	pushBackStep(abortCheckFn, WaitSomeTicks{ 2 * nActionsGap }, []() {return true; }, "wait some ticks");
-
-	pushBackStep(abortCheckFn, hasActionPointFn, selectFighters, "select helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, doAttackFighters2Helics, "fighter: attack enemy helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, selectHelicopters, "select helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, doAttackHelics2Helics, "helicopters: attack enemy helicopters");
-
-	pushBackStep(abortCheckFn, WaitSomeTicks{ 4 * nActionsGap }, []() {return true; }, "wait some ticks");
-
-	pushBackStep(abortCheckFn, hasActionPointFn, selectFighters, "select helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, doAttackFighters2Helics, "fighter: attack enemy helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, selectHelicopters, "select helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, doAttackHelics2Helics, "helicopters: attack enemy helicopters");
-
-	pushBackStep(abortCheckFn, WaitSomeTicks{ 4 * nActionsGap }, []() {return true; }, "wait some ticks");
-
-	pushBackStep(abortCheckFn, hasActionPointFn, selectFighters, "select helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, doAttackFighters2Helics, "fighter: attack enemy helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, selectHelicopters, "select helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, doAttackHelics2Helics, "helicopters: attack enemy helicopters");
-
-	pushBackStep(abortCheckFn, WaitSomeTicks{ 8 * nActionsGap }, []() {return true; }, "wait some ticks");
-
-	// return to original pos:
-
-	pushBackStep(abortCheckFn, hasActionPointFn, shiftAircraft, "return: ensure no aircraft collision");
-	pushBackStep(abortCheckFn, canMove,          selectHelicopters, "return: select helicopters");
-	pushBackStep(abortCheckFn, hasActionPointFn, moveToJoinPoint, "return: move helicopters to IFV");
-
-
-	/**/
+	pushBackStep(abortCheckFn, shouldStartAttack, doAttackFighters, "fighter: start attacking enemy fighters");
 }
 
 bool DefendHelicopters::canMoveRectTo(const Point& from, const Point& to, Rect fromRect, Rect obstacleRect, double iterationSize)
@@ -349,9 +335,6 @@ bool DefendHelicopters::canMoveRectTo(const Point& from, const Point& to, Rect f
     // TODO - it's possible to perform more careful check
     Vec2d direction = Vec2d::fromPoint(to - from).truncate(iterationSize);
     int stepsTotal = static_cast<int>(std::ceil(from.getDistanceTo(to) / iterationSize));
-
-    fromRect = fromRect.inflate(3); // TODO
-    obstacleRect = obstacleRect.inflate(3); // TODO
 
     bool isPathFree = true;
 

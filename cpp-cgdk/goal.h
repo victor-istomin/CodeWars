@@ -7,8 +7,11 @@
 
 class Goal
 {
-    struct Step;
+protected:
     typedef std::function<bool()> Callback;
+
+private:
+    struct Step;
     typedef std::unique_ptr<Step> StepPtr;
 
     struct Step

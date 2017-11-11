@@ -9,7 +9,17 @@ namespace goals
 {
     class DefendHelicopters : public Goal
     {
-        const int MAX_DEFEND_TICK = 3500;
+        const int    MAX_DEFEND_TICK   = 3000;
+        const double MIN_HEALTH_FACTOR = 0.03;
+
+        struct WaitSomeTicks
+        {
+            int m_ticksRemaining;
+
+            bool operator()() { return m_ticksRemaining-- <= 0; }
+        };
+
+        struct DoNothing { bool operator()() { return true; } };
 
         const VehicleGroup& ifvGroup();
         const VehicleGroup& tankGroup();
@@ -22,10 +32,12 @@ namespace goals
 
         static bool isPathFree(const VehicleGroup& group, const Point& to, const VehicleGroup& obstacle, double iterationSize);
 
-        bool abortCheck()                   { return state().world()->getTickIndex() > MAX_DEFEND_TICK; }
+        bool abortCheck();
         bool hasActionPoint()               { return state().player()->getRemainingActionCooldownTicks() == 0; }
 
         const double m_helicopterIteration;  // size of movement emulation increment
+
+        bool doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackWith, const VehicleGroup& attackTarget);
 
     public:
         DefendHelicopters(State& state);

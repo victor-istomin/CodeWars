@@ -11,8 +11,9 @@ typedef std::weak_ptr<model::Vehicle>   VehicleCache;
 struct VehicleGroup
 {
     std::vector<VehicleCache> m_units;
-    Point m_center;
-    Rect  m_rect;
+    Point  m_center;
+    Rect   m_rect;
+    double m_healthSum;
 
     void add(const VehiclePtr& vehicle)     { m_units.emplace_back(vehicle); }
 
