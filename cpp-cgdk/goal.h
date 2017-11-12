@@ -48,7 +48,8 @@ protected:
             m_steps.emplace(++m_steps.begin(), std::make_unique<Step>(std::forward<Args>(args)...));
     }
 
-    State& state() { return m_state; }
+    State& state()             { return m_state; }
+    const State& state() const { return m_state; }
 
     const VehicleGroup& ifvGroup()          const { return m_state.teammates(model::VehicleType::IFV); }
     const VehicleGroup& tankGroup()         const { return m_state.teammates(model::VehicleType::TANK); }
@@ -56,6 +57,13 @@ protected:
     const VehicleGroup& fighterGroup()      const { return m_state.teammates(model::VehicleType::FIGHTER); }
     const VehicleGroup& allienFighters()    const { return m_state.alliens(model::VehicleType::FIGHTER); }
     const VehicleGroup& allienHelicopters() const { return m_state.alliens(model::VehicleType::HELICOPTER); }
+
+    struct WaitSomeTicks
+    {
+        int m_ticksRemaining;
+
+        bool operator()() { return m_ticksRemaining-- <= 0; }
+    };
 
 
 public:

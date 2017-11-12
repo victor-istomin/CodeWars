@@ -124,7 +124,7 @@ DefendHelicopters::DefendHelicopters(State& state)
             Vec2d solutionPath = Vec2d::fromPoint(solution - fighterCenter);
             Rect  proposedRect = fighters.m_rect + solutionPath;
 
-            if (proposedRect.m_topLeft.m_x < 0 || proposedRect.m_topLeft.m_y < 0
+            if (!this->state().isCorrectPosition(proposedRect)
                 || solution.getDistanceTo(ifvCenter) < fightersSize    // don't move over IFV
                 || solution.getDistanceTo(helicoptersCenter) < fightersSize)  // ... or helicopters
             {

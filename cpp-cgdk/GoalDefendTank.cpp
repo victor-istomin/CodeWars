@@ -1,0 +1,303 @@
+#include "GoalDefendTank.h"
+#include "model/Vehicle.h"
+#include "model/Game.h"
+
+#include "state.h"
+#include "VehicleGroup.h"
+
+#include <vector>
+#include <algorithm>
+#include <type_traits>
+#include <functional>
+
+using namespace model;
+using namespace goals;
+
+bool GoalDefendTank::abortCheck() const
+{
+    bool isHelicoptersBeaten = allienHelicopters().m_healthSum < (tankGroup().m_healthSum * MIN_HEALTH_FACTOR);
+    return state().world()->getTickIndex() > MAX_DEFEND_TICK || isHelicoptersBeaten;
+}
+
+bool GoalDefendTank::resolveFightersHelicoptersConflict()
+{
+    const VehicleGroup& fighters    = fighterGroup();
+    const VehicleGroup& helicopters = helicopterGroup();
+
+    if (fighters.m_rect.overlaps(helicopters.m_rect))
+    {
+        Vec2d fightersSpeed    = Vec2d(fighters.m_center - helicopters.m_center).truncate(state().game()->getFighterSpeed());
+        Vec2d helicoptersSpeed = Vec2d(helicopters.m_center - fighters.m_center).truncate(state().game()->getHelicopterSpeed());
+
+        static const double FIGHTER_DISPLACEMENT    = 300;
+        static const double HELICOPTER_DISPLACEMENT = 150;
+
+        const int maxIterations = static_cast<int>(std::max(std::ceil(FIGHTER_DISPLACEMENT / fightersSpeed.length()), 
+                                                            std::ceil(HELICOPTER_DISPLACEMENT / helicoptersSpeed.length())));
+
+        Vec2d fighterSolution;
+        Vec2d helicopterSolution;
+
+        for (int i = 1; i < maxIterations; ++i)
+        {
+            Vec2d proposedFighterSolution = fightersSpeed * i;
+            Rect  proposedFighterRect     = fighters.m_rect + proposedFighterSolution;
+
+            if (state().isCorrectPosition(proposedFighterRect) && !proposedFighterRect.overlaps(helicopters.m_rect))
+            {
+                fighterSolution = proposedFighterSolution;
+                break;
+            }
+
+            Vec2d proposedHelicopterSolution = helicoptersSpeed * i;
+            Rect  proposedHelicoptersRect = helicopters.m_rect + proposedHelicopterSolution;
+            if (state().isCorrectPosition(proposedHelicoptersRect) && !fighters.m_rect.overlaps(proposedHelicoptersRect))
+            {
+                helicopterSolution = proposedHelicopterSolution;
+                break;
+            }
+        }
+
+        m_lastConflictTick = state().world()->getTickIndex();  // TODO: HACK - remove this?
+        auto waitUntilNoCollision = [&fighters, &helicopters, this]()
+        {
+            int ticksElapsed = state().world()->getTickIndex() - m_lastConflictTick;
+
+            return fighters.m_units.empty()
+                || helicopters.m_units.empty()
+                || ticksElapsed > MAX_RESOLVE_CONFLICT_TICKS
+                || !fighters.m_rect.overlaps(helicopters.m_rect);
+        };
+
+        auto doNothing = []() { return true; };
+
+        if (fighterSolution.length() > Point::k_epsilon)
+        {
+            state().setSelectAction(fighters.m_rect, VehicleType::FIGHTER);
+
+            // next steps will be actually pushed in LIFO order! So, start move and then wait
+
+            pushNextStep([this]() { return abortCheck(); }, waitUntilNoCollision, doNothing, "dt: wait for fighter collision resolve");
+
+            pushNextStep([this]() { return abortCheck(); },
+                         [this]() { return state().hasActionPoint(); },
+                         [this, fighterSolution]() { state().setMoveAction(fighterSolution); return true; },
+                         "dt: resolve collision - move fighters away");
+        }
+        else if (helicopterSolution.length() > Point::k_epsilon)
+        {
+            state().setSelectAction(helicopters.m_rect, VehicleType::HELICOPTER);
+
+            // next steps will be actually pushed in LIFO order! So, start move and then wait
+
+            pushNextStep([this]() { return abortCheck(); }, waitUntilNoCollision, doNothing, "dt: wait for helicopter collision resolve");
+
+            pushNextStep([this]() { return abortCheck(); },
+                         [this]() { return state().hasActionPoint(); },
+                         [this, helicopterSolution]() { state().setMoveAction(helicopterSolution); return true; },
+                         "dt: resolve collision - move helicopters away");
+        }
+    }
+    
+
+    return true;
+}
+
+
+bool GoalDefendTank::shiftAircraft()
+{
+    const VehicleGroup& enemyHelicopters = allienHelicopters();
+    const VehicleGroup& tanks = tankGroup();
+    const VehicleGroup& fighters = fighterGroup();
+    const VehicleGroup& helicopters = helicopterGroup();
+
+    if (helicopters.isPathFree(tankGroup().m_center, fighterGroup(), m_helicopterIteration))
+        return true;   // no need to shift
+
+    static const double near = 1.2;
+    static const double far  = 2.4;
+
+    const Point solutions[] = 
+    {
+        enemyHelicopters.m_center, enemyHelicopters.m_rect.m_topLeft, enemyHelicopters.m_rect.topRight(),
+        (enemyHelicopters.m_center + tanks.m_center) / 2, (enemyHelicopters.m_center + fighters.m_center + tanks.m_center) / 3,
+
+        fighters.m_center + Point(fighters.m_rect.width(), 0) * near,     // right
+        fighters.m_center + Point(fighters.m_rect.width(), 0) * far,      // far right
+        fighters.m_center + Point(-fighters.m_rect.width(), 0) * near,    // left
+        fighters.m_center + Point(-fighters.m_rect.width(), 0) * far,     // far left
+        fighters.m_center + Point(0, fighters.m_rect.height()) * near,     // down
+        fighters.m_center + Point(0, fighters.m_rect.height()) * far,      // far down
+        fighters.m_center + Point(0, -fighters.m_rect.height()) * near,    // up
+        fighters.m_center + Point(0, -fighters.m_rect.height()) * far,     // far up
+
+        fighters.m_center + Point(fighters.m_rect.width(), -fighters.m_rect.height()) * near,    // up right
+        fighters.m_center + Point(fighters.m_rect.width(), -fighters.m_rect.height()) * far,     // far up right
+        fighters.m_center + Point(-fighters.m_rect.width(), -fighters.m_rect.height()) * near,   // up left
+        fighters.m_center + Point(-fighters.m_rect.width(), -fighters.m_rect.height()) * far,    // far up left
+
+        fighters.m_center + Point(fighters.m_rect.width(), fighters.m_rect.height()) * near,    // down right
+        fighters.m_center + Point(fighters.m_rect.width(), fighters.m_rect.height()) * far,     // far down right
+        fighters.m_center + Point(-fighters.m_rect.width(), fighters.m_rect.height()) * near,   // down left
+        fighters.m_center + Point(-fighters.m_rect.width(), fighters.m_rect.height()) * far,    // far down left
+    };
+
+    std::vector<Point> correctSolutons;
+    correctSolutons.reserve(std::extent<decltype(solutions)>::value);
+
+    std::copy_if(std::begin(solutions), std::end(solutions), std::back_inserter(correctSolutons), 
+        [this, &fighters, &helicopters, &tanks](const Point& proposed)
+    {
+        Point dxdy = proposed - fighters.m_center;
+        Rect  proposedRect = fighters.m_rect + dxdy;
+
+        return state().isCorrectPosition(proposedRect) 
+            && fighters.isPathFree(proposed, helicopters, m_helicopterIteration)
+            && helicopters.isPathFree(tanks.m_center, fighters, m_helicopterIteration);
+    });
+
+    // sort by distance to tank (less priority) then by distance to enemy helicopters, then by distance to fighters (most priority)
+    std::sort(correctSolutons.begin(), correctSolutons.end(), [&tanks](const Point& left, const Point& right) 
+    {
+        return tanks.m_center.getSquareDistance(left) < tanks.m_center.getSquareDistance(right);
+    });
+
+    std::stable_sort(correctSolutons.begin(), correctSolutons.end(), [&enemyHelicopters](const Point& left, const Point& right)
+    {
+        return enemyHelicopters.m_center.getSquareDistance(left) < enemyHelicopters.m_center.getSquareDistance(right);
+    });
+
+    std::stable_sort(correctSolutons.begin(), correctSolutons.end(), [&fighters](const Point& left, const Point& right)
+    {
+        return fighters.m_center.getSquareDistance(left) < fighters.m_center.getSquareDistance(right);
+    });
+
+    if (!correctSolutons.empty())
+    {
+        state().setSelectAction(fighters.m_rect, VehicleType::FIGHTER);
+
+        Point bestSolution = correctSolutons.front();
+        pushNextStep([this]() { return abortCheck(); }, 
+                     [this]() { return state().hasActionPoint(); },
+                     [this, bestSolution, &fighters]() { state().setMoveAction(bestSolution - fighters.m_center); return true; },
+                     "fighters: defend tank move");
+    }  
+    
+    // TODO else resolve conflict
+
+    return true;
+}
+
+bool GoalDefendTank::moveHelicopters()
+{
+    state().setSelectAction(helicopterGroup().m_rect, VehicleType::HELICOPTER);
+    
+    pushNextStep([this]() { return abortCheck(); },
+                 [this]() { return state().hasActionPoint(); },
+                 [this]() { state().setMoveAction(tankGroup().m_center - helicopterGroup().m_center); return true; },
+                 "helicopters: defend tank move");
+
+    return true;
+}
+
+bool GoalDefendTank::startFightersAttack()
+{
+    state().setSelectAction(fighterGroup().m_rect, VehicleType::FIGHTER);
+
+    pushNextStep([this]() { return abortCheck(); },
+                 [this]() { return state().hasActionPoint(); },
+                 [this]() { return loopFithersAttack(); },
+                 "fighters: defend tank - attack enemy");
+
+    return true;
+}
+
+bool GoalDefendTank::loopFithersAttack()
+{
+    const VehicleGroup& target      = allienHelicopters();
+    const VehicleGroup& fighters    = fighterGroup();
+    const VehicleGroup& tanks       = tankGroup();
+    const VehicleGroup& helicopters = helicopterGroup();
+
+    if (target.m_units.empty() || fighters.m_units.empty() || tankGroup().m_units.empty())
+        return true;
+
+    Point targetPoint = target.m_center;
+
+    Rect fightersPosRect = fighters.m_rect + (targetPoint - fighters.m_center);
+    
+    if (!fighters.m_rect.overlaps(helicopters.m_rect) && (fightersPosRect).overlaps(helicopters.m_rect))
+    {
+        // not yet collide with teammate helicopters, try avoid further collisions
+        const Point fightersSize = Point(fighters.m_rect.width(), fighters.m_rect.height());
+        const Point fightersWidth = Point(fighters.m_rect.width(), 0);
+        const Point fightersHeight = Point(0, fighters.m_rect.height());
+
+        const Point attackPoints[] =
+        {
+            target.m_center,   // most priority
+
+            target.m_center - fightersSize / 4,                        // closer to top left
+            target.m_center - fightersSize / 4 + fightersWidth / 2,    // closer to top right
+            target.m_center + fightersSize / 4 - fightersWidth / 2,    //   ... to bottom left
+            target.m_center + fightersSize / 4,                        //   ... to bottom right
+
+            target.m_rect.m_topLeft + fightersSize / 3,
+            target.m_rect.m_bottomRight - fightersSize / 3,
+        };
+
+        auto solutionIt = std::find_if(std::begin(attackPoints), std::end(attackPoints), 
+            [&fighters, &helicopters, this](const Point& p)
+        {
+            Rect proposedRect = fighters.m_rect + (p - fighters.m_center);
+            return !helicopters.m_rect.overlaps(proposedRect) 
+                && fighters.isPathFree(p, helicopters, m_helicopterIteration);
+        });
+
+        if (solutionIt != std::end(attackPoints) && !(targetPoint == *solutionIt))
+            targetPoint = *solutionIt;
+    }
+       
+    state().setMoveAction(targetPoint - fighters.m_center); 
+
+    // next 2 steps are pushed in LIFO order, so first wait then attack again
+
+    const int WAIT_AMOINT = 10;
+
+    pushNextStep([this]() { return abortCheck(); },
+                 [this]() { return state().hasActionPoint(); },
+                 [this]() { return loopFithersAttack(); },
+                 "fighters: defend tank - loop attack enemy");
+
+    pushNextStep([this]() { return abortCheck(); }, WaitSomeTicks{ WAIT_AMOINT }, []() { return true; }, 
+                 "fighters: defend tank - wait for next iteration");
+
+    return true;
+}
+
+
+GoalDefendTank::GoalDefendTank(State& strategyState)
+    : Goal(strategyState)
+    , m_helicopterIteration(std::min(strategyState.constants().m_helicoprerRadius, strategyState.game()->getHelicopterSpeed()) / 2)
+{
+    Callback abortCheckFn       = [this]() { return abortCheck(); };
+    Callback hasActionPointFn   = [this]() { return state().hasActionPoint(); };
+    Callback canMoveHelicopters = [this]() 
+    { 
+        int conflictTicksLeft = m_lastConflictTick == 0 ? -1 : std::max(0, state().world()->getTickIndex() - m_lastConflictTick - MAX_RESOLVE_CONFLICT_TICKS);
+
+        bool isPathFree = helicopterGroup().isPathFree(tankGroup().m_center, fighterGroup(), m_helicopterIteration);
+
+        return state().hasActionPoint() && (isPathFree || conflictTicksLeft == 0);
+    };
+
+    pushBackStep(abortCheckFn, hasActionPointFn,   [this]() { return resolveFightersHelicoptersConflict(); }, "defend tank: ensure no conflicts");
+    pushBackStep(abortCheckFn, hasActionPointFn,   [this]() { return shiftAircraft(); }, "defend tank: shift aircraft");
+    pushBackStep(abortCheckFn, canMoveHelicopters, [this]() { return moveHelicopters(); }, "defend tank: move helicopters");
+    pushBackStep(abortCheckFn, hasActionPointFn,   [this]() { return startFightersAttack(); }, "defend tank: attack helicopters");
+}
+
+GoalDefendTank::~GoalDefendTank()
+{
+}
+

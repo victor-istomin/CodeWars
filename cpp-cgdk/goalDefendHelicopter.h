@@ -9,19 +9,10 @@ namespace goals
 {
     class DefendHelicopters : public Goal
     {
-        const int    MAX_DEFEND_TICK   = 3000;
+        const int    MAX_DEFEND_TICK   = 4000;
         const double MIN_HEALTH_FACTOR = 0.03;
 
-        struct WaitSomeTicks
-        {
-            int m_ticksRemaining;
-
-            bool operator()() { return m_ticksRemaining-- <= 0; }
-        };
-
         struct DoNothing { bool operator()() { return true; } };
-
-//         static bool isPathFree(const VehicleGroup& group, const Point& to, const VehicleGroup& obstacle, double iterationSize);
 
         bool abortCheck();
         bool hasActionPoint()               { return state().player()->getRemainingActionCooldownTicks() == 0; }

@@ -11,6 +11,8 @@
 #include "model/Player.h"
 #include "model/Move.h"
 #include "model/ActionType.h"
+#include "model/Game.h"
+
 #include "geometry.h"
 #include "VehicleGroup.h"
 
@@ -60,6 +62,8 @@ public:
 
     bool isMoveCommitted() const                                 { return m_isMoveCommitted; }
     bool hasActionPoint() const                                  { return player()->getRemainingActionCooldownTicks() == 0; }
+    bool isCorrectPosition(const Point& p) const                 { return p.m_x >= 0 && p.m_y >= 0 && p.m_x <= m_game->getWorldWidth() && p.m_y <= m_game->getWorldHeight();}
+    bool isCorrectPosition(const Rect& r) const                  { return isCorrectPosition(r.m_topLeft) && isCorrectPosition(r.m_bottomRight); }
 
 
     void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)
