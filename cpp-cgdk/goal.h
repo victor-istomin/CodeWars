@@ -103,5 +103,45 @@ public:
             }
         }
     }
+
+    void checkNuclearLaunch()
+    {
+        if (!m_state.isMoveCommitted() && m_state.player()->getRemainingNuclearStrikeCooldownTicks() == 0)
+        {
+            const auto& allVehicles = state().getAllVehicles();
+
+            std::map<long long, double> nukeDamageMap;
+
+            std::vector<VehiclePtr> teammates;
+            std::vector<VehiclePtr> alliens;
+            teammates.reserve(allVehicles.size());
+            alliens.reserve(allVehicles.size());
+            
+            for(const std::pair<long long, VehiclePtr>& vehicle : allVehicles)
+            {
+                if (vehicle.second->getPlayerId() == state().player()->getId())
+                    teammates.push_back(vehicle.second);
+                else
+                    alliens.push_back(vehicle.second);
+            }
+
+            static const double MIN_HEALTH = 0.5 * 100;    // TODO - remove hardcode
+
+            for (const VehiclePtr& teammate : teammates)
+            {
+                if (teammate->getDurability() < MIN_HEALTH)
+                    continue;   // teammate is about to go :(
+
+                double damage = 0;
+                for (const VehiclePtr& enemy : alliens)
+                    if (teammate->getSquaredDistanceTo(*enemy) < teammate->getSquaredVisionRange())
+                        damage += enemy->getDurability() * (enemy->getDurability() > MIN_HEALTH ? 1 : 2);
+
+                nukeDamageMap[teammate->getId()] = damage;
+            }
+
+
+        }
+    }
 };
 

@@ -53,6 +53,8 @@ public:
     const model::Vehicle& vehicleById(Id id)    const { return *m_vehicles.find(id)->second; }
     model::Vehicle&       vehicleById(Id id)          { return *m_vehicles.find(id)->second; }
 
+    const VehicleByID&    getAllVehicles() const      { return m_vehicles; }
+
     const model::World*  world()    const { return m_world; };
     const model::Player* player()   const { return m_player; };
     const model::Game*   game()     const { return m_game; };
