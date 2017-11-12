@@ -57,6 +57,7 @@ protected:
     const VehicleGroup& fighterGroup()      const { return m_state.teammates(model::VehicleType::FIGHTER); }
     const VehicleGroup& allienFighters()    const { return m_state.alliens(model::VehicleType::FIGHTER); }
     const VehicleGroup& allienHelicopters() const { return m_state.alliens(model::VehicleType::HELICOPTER); }
+    const VehicleGroup& allienTanks()       const { return m_state.alliens(model::VehicleType::TANK); }
 
     struct WaitSomeTicks
     {

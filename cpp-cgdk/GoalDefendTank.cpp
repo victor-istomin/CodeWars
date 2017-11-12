@@ -15,8 +15,14 @@ using namespace goals;
 
 bool GoalDefendTank::abortCheck() const
 {
-    bool isHelicoptersBeaten = allienHelicopters().m_healthSum < (tankGroup().m_healthSum * MIN_HEALTH_FACTOR);
-    return state().world()->getTickIndex() > MAX_DEFEND_TICK || isHelicoptersBeaten;
+    int tickIndex = state().world()->getTickIndex();
+    return tickIndex > MAX_DEFEND_TICK 
+        || (isHelicoptersBeaten() && (tickIndex - m_lastAttackTick > MAX_HEAL_TICKS));
+}
+
+bool GoalDefendTank::isHelicoptersBeaten() const
+{
+    return allienHelicopters().m_healthSum < (tankGroup().m_healthSum * MIN_HEALTH_FACTOR);
 }
 
 bool GoalDefendTank::resolveFightersHelicoptersConflict()
@@ -272,6 +278,7 @@ bool GoalDefendTank::loopFithersAttack()
     pushNextStep([this]() { return abortCheck(); }, WaitSomeTicks{ WAIT_AMOINT }, []() { return true; }, 
                  "fighters: defend tank - wait for next iteration");
 
+    m_lastAttackTick = state().world()->getTickIndex();
     return true;
 }
 
@@ -295,6 +302,36 @@ GoalDefendTank::GoalDefendTank(State& strategyState)
     pushBackStep(abortCheckFn, hasActionPointFn,   [this]() { return shiftAircraft(); }, "defend tank: shift aircraft");
     pushBackStep(abortCheckFn, canMoveHelicopters, [this]() { return moveHelicopters(); }, "defend tank: move helicopters");
     pushBackStep(abortCheckFn, hasActionPointFn,   [this]() { return startFightersAttack(); }, "defend tank: attack helicopters");
+
+    // TODO: move outside this goal
+    pushBackStep(abortCheckFn, hasActionPointFn, [this]() { return resolveFightersHelicoptersConflict(); }, "defend tank: resolve conflicts");
+
+
+//     // cooldown MAX_HEAL_TICKS - heal units:
+//     pushBackStep(abortCheckFn, hasActionPointFn, [abortCheckFn, hasActionPointFn, this]()
+//     { 
+//         Rect overallRect = fighterGroup().m_rect;
+//         overallRect.ensureContains(helicopterGroup().m_rect);
+// 
+//         state().setSelectAction(overallRect, VehicleType::FIGHTER);
+// 
+//         // LIFO push next
+// 
+//         pushNextStep(abortCheckFn, hasActionPointFn, [this, overallRect]() 
+//         {
+//             Point center = overallRect.m_topLeft + Point(overallRect.width(), overallRect.height()) / 2;
+//             state().setMoveAction(ifvGroup().m_center - center);
+//             return true;
+//         }, "move aircraft to defend IFV");
+// 
+//         pushNextStep(abortCheckFn, hasActionPointFn, [this, overallRect]() 
+//         { 
+//             state().setAddToSelectionAction(helicopterGroup().m_rect, VehicleType::HELICOPTER); 
+//             return true;
+//         }, "select helicopters");
+// 
+//         return true;
+//     }, "TODO");
 }
 
 GoalDefendTank::~GoalDefendTank()

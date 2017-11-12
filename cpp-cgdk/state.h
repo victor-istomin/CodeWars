@@ -114,18 +114,33 @@ public:
     void setSelectAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_)
     {
         m_move->setAction(model::ActionType::CLEAR_AND_SELECT);
-        
+
         if (vehicleType != model::VehicleType::_UNKNOWN_)
             m_move->setVehicleType(vehicleType);
-        
+
         m_move->setTop(rect.m_topLeft.m_y);
         m_move->setLeft(rect.m_topLeft.m_x);
         m_move->setBottom(rect.m_bottomRight.m_y);
         m_move->setRight(rect.m_bottomRight.m_x);
-        
+
         m_isMoveCommitted = true;
     }
-    
+
+    void setAddToSelectionAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_)
+    {
+        m_move->setAction(model::ActionType::ADD_TO_SELECTION);
+
+        if (vehicleType != model::VehicleType::_UNKNOWN_)
+            m_move->setVehicleType(vehicleType);
+
+        m_move->setTop(rect.m_topLeft.m_y);
+        m_move->setLeft(rect.m_topLeft.m_x);
+        m_move->setBottom(rect.m_bottomRight.m_y);
+        m_move->setRight(rect.m_bottomRight.m_x);
+
+        m_isMoveCommitted = true;
+    }
+
     void setMoveAction(const Vec2d& vector)
     {
         m_move->setAction(model::ActionType::MOVE);

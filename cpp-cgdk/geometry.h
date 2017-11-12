@@ -57,6 +57,7 @@ struct Rect
 
     // ensure 'inside' point is actually inside rect 
     void ensureContains(const Point& inside);
+    void ensureContains(const Rect& inside);
 
     Rect inflate(const Point& dxdy) const                  { return Rect(m_topLeft - dxdy, m_bottomRight + dxdy); }
     Rect inflate(double amount) const                      { return inflate(Point(amount, amount)); }

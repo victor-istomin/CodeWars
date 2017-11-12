@@ -195,6 +195,7 @@
     <ClCompile Include="csimplesocket\SimpleSocket.cpp" />
     <ClCompile Include="geometry.cpp" />
     <ClCompile Include="goalDefendHelicopter.cpp" />
+    <ClCompile Include="GoalDefendIfv.cpp" />
     <ClCompile Include="GoalDefendTank.cpp" />
     <ClCompile Include="goalManager.cpp" />
     <ClCompile Include="model\CircularUnit.cpp" />
@@ -224,6 +225,7 @@
     <ClInclude Include="geometry.h" />
     <ClInclude Include="goal.h" />
     <ClInclude Include="goalDefendHelicopter.h" />
+    <ClInclude Include="GoalDefendIfv.h" />
     <ClInclude Include="GoalDefendTank.h" />
     <ClInclude Include="goalManager.h" />
     <ClInclude Include="model\ActionType.h" />

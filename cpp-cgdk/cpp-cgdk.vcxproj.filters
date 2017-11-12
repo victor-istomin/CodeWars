@@ -96,6 +96,9 @@
     <ClCompile Include="GoalDefendTank.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GoalDefendIfv.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyStrategy.h">
@@ -195,6 +198,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GoalDefendTank.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalDefendIfv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
