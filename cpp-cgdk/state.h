@@ -151,5 +151,15 @@ public:
         
         m_isMoveCommitted = true;
     }
+
+    void setNukeAction(const Point& point, const model::Vehicle& guide)
+    {
+        m_move->setAction(model::ActionType::TACTICAL_NUCLEAR_STRIKE);
+        m_move->setX(point.m_x);
+        m_move->setY(point.m_y);
+        m_move->setVehicleId(guide.getId());
+
+        m_isMoveCommitted = true;
+    }
 };
 

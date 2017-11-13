@@ -20,7 +20,7 @@ class GoalManager
     void fillCurrentGoals();
 
 public:
-    explicit GoalManager(State& state) : m_state(state) {}
+    explicit GoalManager(State& state);
 
     void tick();
 };
