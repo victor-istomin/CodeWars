@@ -208,12 +208,15 @@ bool GoalDefendTank::moveHelicopters()
 
 bool GoalDefendTank::startFightersAttack()
 {
-    state().setSelectAction(fighterGroup().m_rect, VehicleType::FIGHTER);
+    if (fighterGroup().m_center.getDistanceTo(allienHelicopters().m_center) <= m_maxAgressiveDistance)
+    {
+        state().setSelectAction(fighterGroup().m_rect, VehicleType::FIGHTER);
 
-    pushNextStep([this]() { return abortCheck(); },
-                 [this]() { return state().hasActionPoint(); },
-                 [this]() { return loopFithersAttack(); },
-                 "fighters: defend tank - attack enemy");
+        pushNextStep([this]() { return abortCheck(); },
+            [this]() { return state().hasActionPoint(); },
+            [this]() { return loopFithersAttack(); },
+            "fighters: defend tank - attack enemy");
+    }
 
     return true;
 }
@@ -286,6 +289,7 @@ bool GoalDefendTank::loopFithersAttack()
 GoalDefendTank::GoalDefendTank(State& strategyState)
     : Goal(strategyState)
     , m_helicopterIteration(std::min(strategyState.constants().m_helicoprerRadius, strategyState.game()->getHelicopterSpeed()) / 2)
+    , m_maxAgressiveDistance(strategyState.world()->getWidth() / 4)   // slightly less than half of path from center to me
 {
     Callback abortCheckFn       = [this]() { return abortCheck(); };
     Callback hasActionPointFn   = [this]() { return state().hasActionPoint(); };
