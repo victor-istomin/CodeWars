@@ -49,16 +49,18 @@ bool VehicleGroup::isPathFree(const Point& to, const VehicleGroup& obstacle, dou
 bool VehicleGroup::canMoveRectTo(const Point& from, const Point& to, const Rect& fromRect, const Rect& obstacleRect, double iterationSize)
 {
     // TODO - it's possible to perform more careful check
-    Vec2d direction = Vec2d::fromPoint(to - from).truncate(iterationSize);
-    int stepsTotal = static_cast<int>(std::ceil(from.getDistanceTo(to) / iterationSize));
+    Vec2d  direction = Vec2d::fromPoint(to - from).truncate(iterationSize);
+    double distance  = from.getDistanceTo(to);
 
-    bool isPathFree = true;
-
-    for (int i = 0; i < stepsTotal && isPathFree; ++i)
+    bool  isPathFree = true;
+    Vec2d move = direction;
+    do
     {
-        Rect destination = fromRect + direction * i * iterationSize;
+        Rect destination = fromRect + move;
         isPathFree = !destination.overlaps(obstacleRect);
-    }
+
+        move += direction;
+    } while (move.length() < distance && isPathFree);
 
     return isPathFree;
 }

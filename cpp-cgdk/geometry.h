@@ -16,7 +16,8 @@ struct Point
     double m_x;
     double m_y;
 
-    Point(double x = 0, double y = 0)                             : m_x(x), m_y(y) {}
+    Point()                                                       : m_x(0), m_y(0) {}
+    Point(double x, double y)                                     : m_x(x), m_y(y) {}
     Point(const model::Unit& unit)                                : m_x(unit.getX()), m_y(unit.getY()) {}
 
     Point& operator+=(const Point& right)                         { m_x += right.m_x; m_y += right.m_y; return *this; }
@@ -42,8 +43,9 @@ struct Rect
     Point m_topLeft;
     Point m_bottomRight;
 
-    Rect(const Point& topLeft = Point(), const Point& bottomRight = Point())
-        : m_topLeft(topLeft), m_bottomRight(bottomRight) {}
+    Rect()                                                 : m_topLeft(), m_bottomRight() {}
+
+    Rect(const Point& topLeft, const Point& bottomRight)   : m_topLeft(topLeft), m_bottomRight(bottomRight) {}
 
     Point bottomLeft() const                               { return Point(m_topLeft.m_x, m_bottomRight.m_y); }
     Point topRight()   const                               { return Point(m_bottomRight.m_x, m_topLeft.m_y); }
