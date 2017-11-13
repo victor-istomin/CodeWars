@@ -133,6 +133,7 @@ public:
             }
 
             static const double MIN_HEALTH = 0.5 * 100;    // TODO - remove hardcode
+            static const double MIN_DAMAGE = 100;
 
             for (const VehiclePtr& teammate : teammates)
             {
@@ -140,11 +141,14 @@ public:
                     continue;   // teammate is about to go :(
 
                 double damage = 0;
+                double sqaredVr = teammate->getSquaredVisionRange();
+                    
                 for (const VehiclePtr& enemy : alliens)
-                    if (teammate->getSquaredDistanceTo(*enemy) < teammate->getSquaredVisionRange())
+                    if (teammate->getSquaredDistanceTo(*enemy) < sqaredVr)
                         damage += enemy->getDurability() * (enemy->getDurability() > MIN_HEALTH ? 1 : 2);
 
-                nukeDamageMap[damage] = teammate;
+                if (damage >= MIN_DAMAGE)
+                    nukeDamageMap[damage] = teammate;
             }
 
             struct DamageInfo
@@ -156,7 +160,7 @@ public:
                 DamageInfo(const Point& p, double damage, const VehiclePtr& guide) : m_point(p), m_damage(damage), m_guide(guide) {}
             };
 
-            static const int LOOKUP_ITEMS_LIMIT = 10;
+            static const int LOOKUP_ITEMS_LIMIT = 50;
             std::vector<DamageInfo> targets;
             targets.reserve(LOOKUP_ITEMS_LIMIT);
 
