@@ -305,7 +305,13 @@ GoalDefendTank::GoalDefendTank(State& strategyState)
     pushBackStep(abortCheckFn, hasActionPointFn,   [this]() { return resolveFightersHelicoptersConflict(); }, "defend tank: ensure no conflicts");
     pushBackStep(abortCheckFn, hasActionPointFn,   [this]() { return shiftAircraft(); }, "defend tank: shift aircraft");
     pushBackStep(abortCheckFn, canMoveHelicopters, [this]() { return moveHelicopters(); }, "defend tank: move helicopters");
-    pushBackStep(abortCheckFn, hasActionPointFn,   [this]() { return startFightersAttack(); }, "defend tank: attack helicopters");
+
+    auto shouldStart = [this, hasActionPointFn]() 
+    { 
+        return hasActionPointFn && fighterGroup().m_center.getDistanceTo(allienHelicopters().m_center) <= m_maxAgressiveDistance; 
+    };
+
+    pushBackStep(abortCheckFn, shouldStart,   [this]() { return startFightersAttack(); }, "defend tank: attack helicopters");
 
     // TODO: move outside this goal
     pushBackStep(abortCheckFn, hasActionPointFn, [this]() { return resolveFightersHelicoptersConflict(); }, "defend tank: resolve conflicts");
