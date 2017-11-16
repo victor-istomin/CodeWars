@@ -1,5 +1,5 @@
 #include "VehicleGroup.h"
-#include <cassert>
+#include "noReleaseAssert.h"
 
 void VehicleGroup::update()
 {

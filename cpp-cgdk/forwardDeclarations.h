@@ -12,4 +12,5 @@ namespace model
 class State;
 struct VehicleGroup;
 
-
+class Goal;
+class GoalManager;

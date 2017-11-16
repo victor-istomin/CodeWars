@@ -99,6 +99,9 @@
     <ClCompile Include="GoalDefendIfv.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="goal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyStrategy.h">
@@ -201,6 +204,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GoalDefendIfv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="noReleaseAssert.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -201,6 +201,7 @@
     <ClCompile Include="csimplesocket\PassiveSocket.cpp" />
     <ClCompile Include="csimplesocket\SimpleSocket.cpp" />
     <ClCompile Include="geometry.cpp" />
+    <ClCompile Include="goal.cpp" />
     <ClCompile Include="goalDefendHelicopter.cpp" />
     <ClCompile Include="GoalDefendIfv.cpp" />
     <ClCompile Include="GoalDefendTank.cpp" />
@@ -251,6 +252,7 @@
     <ClInclude Include="model\WeatherType.h" />
     <ClInclude Include="model\World.h" />
     <ClInclude Include="MyStrategy.h" />
+    <ClInclude Include="noReleaseAssert.h" />
     <ClInclude Include="RemoteProcessClient.h" />
     <ClInclude Include="Runner.h" />
     <ClInclude Include="state.h" />

@@ -1,10 +1,11 @@
 ﻿#pragma once
+#include "noReleaseAssert.h"
+
 #include <vector>
 #include <map>
 #include <algorithm>
 #include <iterator>
 #include <utility>
-#include <cassert>
 #include <memory>
 
 #include "model/World.h"
