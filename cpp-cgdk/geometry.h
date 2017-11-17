@@ -33,6 +33,7 @@ struct Point
     friend Point operator/(const Point& left, double right)       { return Point(left) /= right; }
 
     bool operator==(const Point& right) const                     { return std::abs(m_x - right.m_x) < k_epsilon && std::abs(m_y - right.m_y) < k_epsilon; }
+    bool operator!=(const Point& right) const                     { return !(*this == right); }
 
     double getDistanceTo(const Point& other)     const            { return std::sqrt(getSquareDistance(other)); }
     double getSquareDistance(const Point& other) const            { return pow2(m_x - other.m_x) + pow2(m_y - other.m_y); }
