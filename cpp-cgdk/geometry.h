@@ -54,6 +54,8 @@ struct Rect
     bool overlaps(const Rect& other) const;
     bool overlaps(const Rect& other, Rect& intersection) const;
 
+    bool contains(const Point& point) const;
+
     double height() const                                  { return std::abs(m_bottomRight.m_y - m_topLeft.m_y); }
     double width()  const                                  { return std::abs(m_bottomRight.m_x - m_topLeft.m_x); }
 

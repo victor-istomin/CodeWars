@@ -136,10 +136,14 @@ DefendHelicopters::DefendHelicopters(State& state)
 
             Vec2d helics2fighter   = Vec2d::fromPoint(fighterCenter - helicoptersCenter);
             Vec2d helics2solution  = Vec2d::fromPoint(solution - helicoptersCenter);
-            
-            // TODO - refactor to isPathFree
-            return VehicleGroup::canMoveRectTo(helicoptersCenter, ifvCenter, helicopters.m_rect, fighters.m_rect + solutionPath, m_helicopterIteration)
-                && VehicleGroup::canMoveRectTo(fighterCenter, solution, fighters.m_rect, helicopters.m_rect, m_helicopterIteration);
+
+			VehicleGroupGhost fightersNew = fighters + fighter2solution;  // TODO
+
+			return helicopters.isPathFree(ifvCenter, fightersNew, m_helicopterIteration)
+				&& fighters.isPathFree(solution, helicopters, m_helicopterIteration);
+//             // TODO - refactor to isPathFree
+//             return VehicleGroup::canMoveRectTo(helicoptersCenter, ifvCenter, helicopters.m_rect, fighters.m_rect + solutionPath, m_helicopterIteration)
+//                 && VehicleGroup::canMoveRectTo(fighterCenter, solution, fighters.m_rect, helicopters.m_rect, m_helicopterIteration);
         });
 
         const Point solution    = solutionIt != std::end(solutions) ? *solutionIt : *std::rbegin(solutions);
