@@ -22,7 +22,7 @@ bool GoalDefendIfv::shiftAircraft()
     const VehicleGroup& fighters    = fighterGroup();
     const VehicleGroup& helicopters = helicopterGroup();
 
-    if (helicopters.isPathFree(ifv.m_center, fighters, m_helicopterIteration))
+    if (helicopters.isPathFree(ifv.m_center, Obstacle(fighters), m_helicopterIteration))
         return true;   // no need to shift
 
     static const double near = 1.2;
@@ -60,8 +60,8 @@ bool GoalDefendIfv::shiftAircraft()
         Rect  proposedRect = fighters.m_rect + dxdy;
 
         return state().isCorrectPosition(proposedRect)
-            && fighters.isPathFree(proposed, helicopters, m_helicopterIteration)
-            && helicopters.isPathFree(ifv.m_center, fighters, m_helicopterIteration);
+            && fighters.isPathFree(proposed, Obstacle(helicopters), m_helicopterIteration)
+            && helicopters.isPathFree(ifv.m_center, Obstacle(fighters), m_helicopterIteration);
     });
 
     std::sort(correctSolutons.begin(), correctSolutons.end(), [&fighters](const Point& left, const Point& right)
@@ -109,7 +109,7 @@ GoalDefendIfv::GoalDefendIfv(State& strategyState)
     {
 //        int conflictTicksLeft = m_lastConflictTick == 0 ? -1 : std::max(0, state().world()->getTickIndex() - m_lastConflictTick - MAX_RESOLVE_CONFLICT_TICKS);
 
-        bool isPathFree = helicopterGroup().isPathFree(tankGroup().m_center, fighterGroup(), m_helicopterIteration);
+        bool isPathFree = helicopterGroup().isPathFree(tankGroup().m_center, Obstacle(fighterGroup()), m_helicopterIteration);
 
         return state().hasActionPoint() && (isPathFree /*|| conflictTicksLeft == 0*/);
     };

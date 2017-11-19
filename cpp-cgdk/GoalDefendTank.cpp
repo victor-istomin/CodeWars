@@ -117,7 +117,7 @@ bool GoalDefendTank::shiftAircraft()
     const VehicleGroup& fighters = fighterGroup();
     const VehicleGroup& helicopters = helicopterGroup();
 
-    if (helicopters.isPathFree(tankGroup().m_center, fighterGroup(), m_helicopterIteration))
+    if (helicopters.isPathFree(tankGroup().m_center, Obstacle(fighterGroup()), m_helicopterIteration))
         return true;   // no need to shift
 
     static const double near = 1.2;
@@ -158,8 +158,8 @@ bool GoalDefendTank::shiftAircraft()
         Rect  proposedRect = fighters.m_rect + dxdy;
 
         return state().isCorrectPosition(proposedRect) 
-            && fighters.isPathFree(proposed, helicopters, m_helicopterIteration)
-            && helicopters.isPathFree(tanks.m_center, fighters, m_helicopterIteration);
+            && fighters.isPathFree(proposed, Obstacle(helicopters), m_helicopterIteration)
+            && helicopters.isPathFree(tanks.m_center, Obstacle(fighters), m_helicopterIteration);
     });
 
     // sort by distance to tank (less priority) then by distance to enemy helicopters, then by distance to fighters (most priority)
@@ -231,7 +231,7 @@ bool GoalDefendTank::loopFithersAttack()
     if (target.m_units.empty() || fighters.m_units.empty() || tankGroup().m_units.empty())
         return true;
 
-    Point targetPoint = target.m_center;
+    Point targetPoint = target.m_rect.m_bottomRight;
 
     Rect fightersPosRect = fighters.m_rect + (targetPoint - fighters.m_center);
     
@@ -253,6 +253,8 @@ bool GoalDefendTank::loopFithersAttack()
 
             target.m_rect.m_topLeft + fightersSize / 3,
             target.m_rect.m_bottomRight - fightersSize / 3,
+            target.m_rect.topRight() + fightersSize / 3,
+            target.m_rect.bottomLeft() - fightersSize / 3,
         };
 
         auto solutionIt = std::find_if(std::begin(attackPoints), std::end(attackPoints), 
@@ -260,7 +262,7 @@ bool GoalDefendTank::loopFithersAttack()
         {
             Rect proposedRect = fighters.m_rect + (p - fighters.m_center);
             return !helicopters.m_rect.overlaps(proposedRect) 
-                && fighters.isPathFree(p, helicopters, m_helicopterIteration);
+                && fighters.isPathFree(p, Obstacle(helicopters), m_helicopterIteration);
         });
 
         if (solutionIt != std::end(attackPoints) && !(targetPoint == *solutionIt))
@@ -297,7 +299,7 @@ GoalDefendTank::GoalDefendTank(State& strategyState)
     { 
         int conflictTicksLeft = m_lastConflictTick == 0 ? -1 : std::max(0, state().world()->getTickIndex() - m_lastConflictTick - MAX_RESOLVE_CONFLICT_TICKS);
 
-        bool isPathFree = helicopterGroup().isPathFree(tankGroup().m_center, fighterGroup(), m_helicopterIteration);
+        bool isPathFree = helicopterGroup().isPathFree(tankGroup().m_center, Obstacle(fighterGroup()), m_helicopterIteration);
 
         return state().hasActionPoint() && (isPathFree || conflictTicksLeft == 0);
     };
@@ -316,32 +318,6 @@ GoalDefendTank::GoalDefendTank(State& strategyState)
     // TODO: move outside this goal
     pushBackStep(abortCheckFn, hasActionPointFn, [this]() { return resolveFightersHelicoptersConflict(); }, "defend tank: resolve conflicts");
 
-
-//     // cooldown MAX_HEAL_TICKS - heal units:
-//     pushBackStep(abortCheckFn, hasActionPointFn, [abortCheckFn, hasActionPointFn, this]()
-//     { 
-//         Rect overallRect = fighterGroup().m_rect;
-//         overallRect.ensureContains(helicopterGroup().m_rect);
-// 
-//         state().setSelectAction(overallRect, VehicleType::FIGHTER);
-// 
-//         // LIFO push next
-// 
-//         pushNextStep(abortCheckFn, hasActionPointFn, [this, overallRect]() 
-//         {
-//             Point center = overallRect.m_topLeft + Point(overallRect.width(), overallRect.height()) / 2;
-//             state().setMoveAction(ifvGroup().m_center - center);
-//             return true;
-//         }, "move aircraft to defend IFV");
-// 
-//         pushNextStep(abortCheckFn, hasActionPointFn, [this, overallRect]() 
-//         { 
-//             state().setAddToSelectionAction(helicopterGroup().m_rect, VehicleType::HELICOPTER); 
-//             return true;
-//         }, "select helicopters");
-// 
-//         return true;
-//     }, "TODO");
 }
 
 GoalDefendTank::~GoalDefendTank()

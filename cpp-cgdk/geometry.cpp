@@ -22,6 +22,12 @@ bool Rect::overlaps(const Rect& other, Rect& intersection) const
     return doesOverlap;
 }
 
+bool Rect::contains(const Point& point) const
+{
+	return m_topLeft.m_x <= point.m_x     && m_topLeft.m_y <= point.m_y
+	    && m_bottomRight.m_x >= point.m_x && m_bottomRight.m_y >= point.m_y;
+}
+
 void Rect::ensureContains(const Point& inside)
 {
     m_topLeft     = Point(std::min(m_topLeft.m_x, inside.m_x),     std::min(m_topLeft.m_y, inside.m_y));
