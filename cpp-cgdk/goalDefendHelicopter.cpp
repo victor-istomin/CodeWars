@@ -48,7 +48,7 @@ bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, c
     const VehicleGroup& obstacle = helicopterGroup();  // <-- TODO generalize! 
 
     std::stable_partition(std::begin(attackPoints), std::end(attackPoints),
-        [this, &attackWith, &obstacle](const Point& p) { return attackWith.isPathFree(p, obstacle, m_helicopterIteration); });
+        [this, &attackWith, &obstacle](const Point& p) { return attackWith.isPathFree(p, Obstacle(obstacle), m_helicopterIteration); });
 
     const Point& destination = attackPoints[0];
     Vec2d path = destination - attackWith.m_center;
@@ -75,7 +75,7 @@ DefendHelicopters::DefendHelicopters(State& state)
     auto abortCheckFn     = [this]() { return abortCheck(); };
     auto hasActionPointFn = [this]() { return this->state().hasActionPoint(); };
 
-    auto isPathToIfvFree  = [this]() { return helicopterGroup().isPathFree(ifvGroup().m_center, fighterGroup(), m_helicopterIteration); };
+    auto isPathToIfvFree  = [this]() { return helicopterGroup().isPathFree(ifvGroup().m_center, Obstacle(fighterGroup()), m_helicopterIteration); };
 
     auto shiftAircraft    = [isPathToIfvFree, abortCheckFn, hasActionPointFn, this]()
     {
@@ -137,10 +137,10 @@ DefendHelicopters::DefendHelicopters(State& state)
             Vec2d helics2fighter   = Vec2d::fromPoint(fighterCenter - helicoptersCenter);
             Vec2d helics2solution  = Vec2d::fromPoint(solution - helicoptersCenter);
 
-			VehicleGroupGhost fightersNew = fighters + fighter2solution;  // TODO
+			VehicleGroupGhost fightersGhost = VehicleGroupGhost(fighters, fighter2solution);  // TODO
 
-			return helicopters.isPathFree(ifvCenter, fightersNew, m_helicopterIteration)
-				&& fighters.isPathFree(solution, helicopters, m_helicopterIteration);
+			return helicopters.isPathFree(ifvCenter, Obstacle(fightersGhost), m_helicopterIteration)
+				&& fighters.isPathFree(solution, Obstacle(helicopters), m_helicopterIteration);
 //             // TODO - refactor to isPathFree
 //             return VehicleGroup::canMoveRectTo(helicoptersCenter, ifvCenter, helicopters.m_rect, fighters.m_rect + solutionPath, m_helicopterIteration)
 //                 && VehicleGroup::canMoveRectTo(fighterCenter, solution, fighters.m_rect, helicopters.m_rect, m_helicopterIteration);
@@ -182,7 +182,7 @@ DefendHelicopters::DefendHelicopters(State& state)
         Vec2d pathFromHelicopters = Vec2d(allienFighters().m_center - helicopterGroup().m_center).normalize() * fighterGroup().m_rect.height() * 1.8;
         Point defendDestination   = helicopters.m_center + pathFromHelicopters.toPoint<Point>();
 
-        if (fighters.isPathFree(defendDestination, helicopters, m_helicopterIteration))
+        if (fighters.isPathFree(defendDestination, Obstacle(helicopters), m_helicopterIteration))
         {
             this->state().setMoveAction(defendDestination - fighters.m_center);
         }
@@ -212,11 +212,11 @@ DefendHelicopters::DefendHelicopters(State& state)
                 [&helicopters, &fighters, &defendDestination, this](const Point& tmpPos) 
             {
                 Vec2d dFighters = tmpPos - fighters.m_center;
-                VehicleGroup fightersGhost = fighters.getGhost(dFighters);
+                VehicleGroupGhost fightersGhost = VehicleGroupGhost(fighters, dFighters);
 
                 return tmpPos.m_x > 0 && tmpPos.m_y > 0
-                    && fighters.isPathFree(tmpPos, helicopters, m_helicopterIteration)
-                    && fightersGhost.isPathFree(defendDestination, helicopters, m_helicopterIteration);
+                    && fighters.isPathFree(tmpPos, Obstacle(helicopters), m_helicopterIteration)
+                    && fightersGhost.isPathFree(defendDestination, Obstacle(helicopters), m_helicopterIteration);
             });
 
             if (solutionIt != std::end(solutions))
@@ -231,7 +231,7 @@ DefendHelicopters::DefendHelicopters(State& state)
                 { 
                     return hasActionPointFn() 
                         && fighterGroup().m_center.getDistanceTo(tmpPoint) < 1
-                        && fighterGroup().isPathFree(defendDestination, helicopterGroup(), m_helicopterIteration);
+                        && fighterGroup().isPathFree(defendDestination, Obstacle(helicopterGroup()), m_helicopterIteration);
                 };
 
                 this->pushNextStep(abortCheckFn, ready, [this, finalPath]() { this->state().setMoveAction(finalPath); return true; }, "fighter: defend helicopters");
