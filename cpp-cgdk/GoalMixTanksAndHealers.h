@@ -16,6 +16,7 @@ namespace goals
             int m_x;
             int m_y;
             GridPos(int x, int y) : m_x(x), m_y(y)      {}
+			GridPos()             : m_x(0), m_y(0)      {}
             bool operator==(const GridPos& other) const { return m_x == other.m_x && m_y == other.m_y; }
 
         };
@@ -28,7 +29,7 @@ namespace goals
 
         double m_iterationSize;
 
-        Destinations getMoves(model::VehicleType groupType, const Point& actualCenter, const GridPos& actual, const GridPos& destination);
+        Destinations getMoves(model::VehicleType groupType, const Point& actualCenter, const GridPos& actual, const GridPos& destination, bool allowShifting);
         static double getPathLength(const Point& start, const Destinations& path);
 
 

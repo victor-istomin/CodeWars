@@ -4,6 +4,7 @@
 
 #include <map>
 #include <array>
+#include <limits>
 
 using namespace goals;
 using namespace model;
@@ -31,7 +32,7 @@ MixTanksAndHealers::MixTanksAndHealers(State& worldState)
 
     MovePlan movesByType;
     for (VehicleType type : s_groundUnits)
-        movesByType[type] = getMoves(type, actualPositions[type], desiredPositions[type]);
+        movesByType[type] = getMoves(type, state().teammates(type).m_center, actualPositions[type], desiredPositions[type], true);
 
 
 //    bool isNeedIfvShift = rows[VehicleType::ARRV] == rows[VehicleType::IFV] && rows[VehicleType::ARRV] == rows[VehicleType::TANK];
@@ -125,23 +126,24 @@ void MixTanksAndHealers::getGroundUnitOrder(PosByType& actualPositions, PosByTyp
     }
 }
 
-MixTanksAndHealers::Destinations MixTanksAndHealers::getMoves(VehicleType groupType, const Point& actualCenter, const GridPos& actual, const GridPos& destination)
+MixTanksAndHealers::Destinations MixTanksAndHealers::getMoves(
+    VehicleType groupType, const Point& actualCenter, const GridPos& actual, const GridPos& destination, bool allowShifting)
 {
-    if (actual == destination)
-        return Destinations();
-
     const VehicleGroup& initialGroup = state().teammates(groupType);
     VehicleGroupGhost ghost = VehicleGroupGhost(initialGroup, actualCenter - initialGroup.m_center);
+
+	const int dx = destination.m_x - actual.m_x;
+	const int dy = destination.m_y - actual.m_y;
+	Point to = ghost.m_center + (Point(dx, dy) * ghost.m_rect.width());
+
+	if (actual == destination)
+		return Destinations({ to });
 
     std::vector<const VehicleGroup*> obstacles;
 
     for (VehicleType type : s_groundUnits)
         if (type != groupType)
             obstacles.push_back(&state().teammates(type));
-
-    const int dx = destination.m_x - actual.m_x;
-    const int dy = destination.m_y - actual.m_y;
-    Point to = ghost.m_center + (Point(dx, dy) * ghost.m_rect.width());
 
     bool isStraightWay = true;
     for (const VehicleGroup* obstacle : obstacles)
@@ -160,40 +162,76 @@ MixTanksAndHealers::Destinations MixTanksAndHealers::getMoves(VehicleType groupT
         const GridPos firstStage       = GridPos(actual.m_x + dx, actual.m_y);
         const Point   firstStageResult = ghost.m_center + (Point(dx, 0) * ghost.m_rect.width());
 
-        Destinations xPart = getMoves(groupType, ghost.m_center, actual, firstStage);
-        Destinations yPart = getMoves(groupType, firstStageResult, firstStage, destination);
+        Destinations xPart = getMoves(groupType, ghost.m_center, actual, firstStage, false);
+        Destinations yPart = getMoves(groupType, firstStageResult, firstStage, destination, false);
 
-        path.insert(path.end(), xPart.begin(), xPart.end());
-        path.insert(path.end(), xPart.begin(), xPart.end());
+		if (!xPart.empty() && !yPart.empty())
+		{
+			path.insert(path.end(), xPart.begin(), xPart.end());
+			path.insert(path.end(), xPart.begin(), xPart.end());
+		}
 
         // try alt path: by Y and then by  X
         const GridPos altStage       = GridPos(actual.m_x, actual.m_y + dy);
         const Point   altStageResult = ghost.m_center + (Point(0, dy) * ghost.m_rect.width());
 
-        Destinations xPartAlt = getMoves(groupType, ghost.m_center, actual, altStage);
-        Destinations yPartAlt = getMoves(groupType, altStageResult, altStage, destination);
+        Destinations xPartAlt = getMoves(groupType, ghost.m_center, actual, altStage, false);
+        Destinations yPartAlt = getMoves(groupType, altStageResult, altStage, destination, false);
 
         Destinations altPath;
-        altPath.insert(altPath.end(), xPart.begin(), xPart.end());
-        altPath.insert(altPath.end(), xPart.begin(), xPart.end());
+		if (!xPartAlt.empty() && !yPartAlt.empty())
+		{
+			altPath.insert(altPath.end(), xPart.begin(), xPart.end());
+			altPath.insert(altPath.end(), xPart.begin(), xPart.end());
+		}
 
         // choose shorter alternative
-        double primaryLength = getPathLength(ghost.m_center, path);
-        double altLength     = getPathLength(ghost.m_center, altPath);
+        double primaryLength = path.empty()    ? std::numeric_limits<double>::max() : getPathLength(ghost.m_center, path);
+        double altLength     = altPath.empty() ? std::numeric_limits<double>::max() : getPathLength(ghost.m_center, altPath);
 
         if (altLength < primaryLength)
             std::swap(altPath, path);
-
-        assert(!path.empty());    // todo: deffer recalculation if no path?
-        return path;
     }
-
-    if (dy != 0)
+	else if (dy != 0 && allowShifting)
     {
-        // 
+		assert(dx == 0);  // this code is for vertical move
+
+		bool shiftLeft = actual.m_x > 0 && (actual.m_y % 2 == 1);    // alternating shift direction in order to avoid repeating collisions
+		const int newDx = shiftLeft ? -1 : 1;
+
+		const GridPos firstStage = GridPos(actual.m_x + newDx, actual.m_y);
+		const Point   firstStageResult = ghost.m_center + (Point(newDx, 0) * ghost.m_rect.width());
+
+		Destinations xPart = getMoves(groupType, actualCenter, actual, firstStage, false);
+		Destinations yPart = getMoves(groupType, firstStageResult, firstStage, destination, false);
+
+		if (!xPart.empty() && !yPart.empty())
+		{
+			path.insert(path.end(), xPart.begin(), xPart.end());
+			path.insert(path.end(), xPart.begin(), xPart.end());
+		}
     }
+	else if (dx != 0 && allowShifting)
+	{
+		assert(dy == 0);  // this code is for horizontal move
 
+		bool shiftUp = actual.m_y > 0 && (actual.m_x % 2 == 1);    // alternating shift direction in order to avoid repeating collisions
+		const int newDy = shiftUp ? -1 : 1;
 
+		const GridPos firstStage = GridPos(actual.m_x, actual.m_y + newDy);
+		const Point   firstStageResult = ghost.m_center + (Point(0, newDy) * ghost.m_rect.width());
+
+		Destinations xPart = getMoves(groupType, actualCenter, actual, firstStage, false);
+		Destinations yPart = getMoves(groupType, firstStageResult, firstStage, destination, false);
+
+		if (!xPart.empty() && !yPart.empty())
+		{
+			path.insert(path.end(), xPart.begin(), xPart.end());
+			path.insert(path.end(), xPart.begin(), xPart.end());
+		}
+	}
+
+	return path;
 }
 
 double MixTanksAndHealers::getPathLength(const Point& start, const Destinations& path)
