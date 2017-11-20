@@ -2,6 +2,7 @@
 #include "goalDefendHelicopter.h"
 #include "GoalDefendTank.h"
 #include "GoalDefendIfv.h"
+#include "GoalMixTanksAndHealers.h"
 #include "state.h"
 
 void GoalManager::fillCurrentGoals()
@@ -10,6 +11,7 @@ void GoalManager::fillCurrentGoals()
 
     if (m_state.world()->getTickIndex() == 0)
     {
+        m_currentGoals.emplace_back(0, std::make_unique<goals::MixTanksAndHealers>(m_state));
         m_currentGoals.emplace_back(1, std::make_unique<goals::DefendHelicopters>(m_state));
         m_currentGoals.emplace_back(2, std::make_unique<goals::GoalDefendTank>(m_state));
         m_currentGoals.emplace_back(3, std::make_unique<goals::GoalDefendIfv>(m_state));
