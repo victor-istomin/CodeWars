@@ -14,19 +14,31 @@
 #include "model/PlayerContext.h"
 #include "model/World.h"
 
-enum MessageType {
-    UNKNOWN_MESSAGE,
+enum class MessageType {
+    UNKNOWN,
     GAME_OVER,
     AUTHENTICATION_TOKEN,
     TEAM_SIZE,
     PROTOCOL_VERSION,
     GAME_CONTEXT,
     PLAYER_CONTEXT,
-    MOVE_MESSAGE
+    MOVE
+};
+
+class ReadBuffer {
+public:
+    explicit ReadBuffer(CActiveSocket &socket);
+    signed char* read(unsigned int byteCount);
+    std::vector<signed char> readToVector(unsigned int byteCount);
+private:
+    std::vector<signed char> buf;
+    size_t pos;
+    CActiveSocket &socket;
 };
 
 class RemoteProcessClient {
     CActiveSocket socket;
+    ReadBuffer buffer;
     bool cachedBoolFlag;
     bool cachedBoolValue;
 
@@ -100,8 +112,13 @@ class RemoteProcessClient {
     double readDouble();
     void writeDouble(double value);
 
-    signed char readByte();
-    std::vector<signed char> readBytes(unsigned int byteCount);
+    signed char readByte() {
+        return *buffer.read(1);
+    }
+    
+    std::vector<signed char> readBytes(unsigned int byteCount) {
+        return buffer.readToVector(byteCount);
+    }
     void writeByte(signed char value);
     void writeBytes(const std::vector<signed char>& bytes);
 
