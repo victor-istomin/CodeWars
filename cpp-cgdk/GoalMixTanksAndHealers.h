@@ -16,9 +16,8 @@ namespace goals
             int m_x;
             int m_y;
             GridPos(int x, int y) : m_x(x), m_y(y)      {}
-			GridPos()             : m_x(0), m_y(0)      {}
+            GridPos()             : m_x(0), m_y(0)      {}
             bool operator==(const GridPos& other) const { return m_x == other.m_x && m_y == other.m_y; }
-
         };
 
         typedef std::map<model::VehicleType, GridPos>       PosByType;
@@ -28,17 +27,26 @@ namespace goals
         static const model::VehicleType s_groundUnits[];
 
         double m_iterationSize;
+		Point m_topLeftMargin;
+		Point m_gridCellSize;
+
+		std::map<int, double> m_xGridToPos;   // convert column number to world position
+		std::map<int, double> m_yGridToPos;   // convert row number to world position
 
         Destinations getMoves(model::VehicleType groupType, const Point& actualCenter, const GridPos& actual, const GridPos& destination, bool allowShifting);
         static double getPathLength(const Point& start, const Destinations& path);
 
+		void  initGridPositions();
+
+		GridPos pointToPos(const Point& center);
+		Point   posToPoint(const GridPos& pos);
 
         bool shiftIfv();
 
         struct NeverAbort { bool operator()() { return false; } };
 
     public:
-        MixTanksAndHealers(State& state);
+        explicit MixTanksAndHealers(State& state);
 
         void getGroundUnitOrder(PosByType& actualPositions, PosByType& desiredPositions);
 

@@ -21,10 +21,12 @@
 
 class State
 {
-
+public:
     typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
     typedef std::map<Id, VehiclePtr>                      VehicleByID;
     typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;
+
+private:
 
     VehicleByID m_vehicles;
     GroupByType m_alliens;
@@ -60,6 +62,7 @@ public:
     const model::Player* player()   const { return m_player; };
     const model::Game*   game()     const { return m_game; };
 
+	const GroupByType&  teammates() const                        { return m_teammates; }
 	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
 	const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
 
