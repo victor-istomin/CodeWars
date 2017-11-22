@@ -46,6 +46,26 @@ MixTanksAndHealers::MixTanksAndHealers(State& worldState)
 
     auto hasActionPoint = [this]()  { return state().hasActionPoint(); };
     pushBackStep(NeverAbort(), hasActionPoint, [this]() { return applyMovePlan(); }, "applying move plan");
+
+    assert(!movesByType[VehicleType::IFV].empty() && !movesByType[VehicleType::TANK].empty() && !movesByType[VehicleType::ARRV].empty());
+
+    const auto& ifvPlan  = movesByType[VehicleType::IFV];
+    const auto& tankPlan = movesByType[VehicleType::TANK];
+    const auto& arrvPlan = movesByType[VehicleType::ARRV];
+
+    const Point ifvDestination  = ifvPlan.empty() ? Point() : ifvPlan.back();
+    const Point tankDestination = tankPlan.empty() ? Point() : tankPlan.back();
+    const Point arrvDestination = arrvPlan.empty() ? Point() : arrvPlan.back();
+
+    auto isLineReady = [this, ifvDestination, tankDestination, arrvDestination]() 
+    { 
+        return state().hasActionPoint()
+            && state().teammates(VehicleType::ARRV).m_center == arrvDestination
+            && state().teammates(VehicleType::IFV).m_center == ifvDestination
+            && state().teammates(VehicleType::TANK).m_center == tankDestination;
+    };
+
+    pushBackStep(NeverAbort(), isLineReady, [this]() { return scaleGroups(); }, "scale groups");
 }
 
 MixTanksAndHealers::~MixTanksAndHealers()
@@ -335,8 +355,10 @@ bool MixTanksAndHealers::applyMovePlan()
 {
     auto hasActionPoint = [this]() { return state().hasActionPoint(); };
 
-    for (auto& typePlanPair : m_pendingMoves)
+    for (auto it = m_pendingMoves.begin(); it != m_pendingMoves.end(); )
     {
+        auto& typePlanPair = *it;
+
         VehicleType type = typePlanPair.first;
         const VehicleGroup& group = state().teammates(type);
         auto& pathPoints = typePlanPair.second;
@@ -364,7 +386,43 @@ bool MixTanksAndHealers::applyMovePlan()
 
         if (state().isMoveCommitted())
             break;
+
+        // purge empty step
+        if (pathPoints.empty())
+        {
+            it = m_pendingMoves.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
     }
+
+    return true;
+}
+
+bool MixTanksAndHealers::scaleGroups()
+{
+    auto hasActionPoint = [this]() { return state().hasActionPoint(); };
+
+    auto getScaleFn = [this, hasActionPoint](VehicleType type, double factor) 
+    {
+        return [this, type, factor, hasActionPoint]() 
+        { 
+            const VehicleGroup& group = state().teammates(type);
+            Point center = group.m_center;
+
+            state().setSelectAction(group.m_rect, type);
+            pushNextStep(NeverAbort(), hasActionPoint, [this, center, factor]() { state().setScaleAction(factor, center); return true; }, "scaling");
+            
+            return true;
+        };
+    };
+
+    // LIFO order
+    pushNextStep(NeverAbort(), hasActionPoint, getScaleFn(VehicleType::ARRV, 1.5), "scale ARRV");
+    pushNextStep(NeverAbort(), hasActionPoint, getScaleFn(VehicleType::IFV, 1.5), "scale IFV");
+    pushNextStep(NeverAbort(), hasActionPoint, getScaleFn(VehicleType::TANK, 1.5), "scale TANK");
 
     return true;
 }

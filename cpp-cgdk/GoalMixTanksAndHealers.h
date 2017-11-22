@@ -44,6 +44,7 @@ namespace goals
 		Point   posToPoint(const GridPos& pos);
 
         bool applyMovePlan();
+        bool scaleGroups();
 
         struct NeverAbort { bool operator()() { return false; } };
         struct DoNothing  { bool operator()() { return true; } };

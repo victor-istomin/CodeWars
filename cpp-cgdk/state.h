@@ -165,5 +165,15 @@ public:
 
         m_isMoveCommitted = true;
     }
+
+    void setScaleAction(double factor, const Point& center)
+    {
+        m_move->setAction(model::ActionType::SCALE);
+        m_move->setX(center.m_x);
+        m_move->setY(center.m_y);
+        m_move->setFactor(factor);
+
+        m_isMoveCommitted = true;
+    }
 };
 
