@@ -410,7 +410,7 @@ bool MixTanksAndHealers::scaleGroups()
         return [this, type, factor, hasActionPoint]() 
         { 
             const VehicleGroup& group = state().teammates(type);
-            Point center = group.m_center;
+            Point center = (group.m_rect.bottomLeft() + group.m_rect.m_bottomRight) / 2;  //group.m_center;
 
             state().setSelectAction(group.m_rect, type);
             pushNextStep(NeverAbort(), hasActionPoint, [this, center, factor]() { state().setScaleAction(factor, center); return true; }, "scaling");
