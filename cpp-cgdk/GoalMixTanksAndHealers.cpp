@@ -36,9 +36,16 @@ MixTanksAndHealers::MixTanksAndHealers(State& worldState)
     for (VehicleType type : s_groundUnits)
         movesByType[type] = getMoves(type, state().teammates(type).m_center, actualPositions[type], desiredPositions[type], true);
 
-	std::list<int> todo;
+    m_overallMoves = m_pendingMoves = movesByType;
 
+    // moves can contain collisions, this will resolve them
+    for (VehicleType type : s_groundUnits)
+        movesByType[type] = getMoves(type, state().teammates(type).m_center, actualPositions[type], desiredPositions[type], true);
 
+    m_overallMoves = m_pendingMoves = movesByType;
+
+    auto hasActionPoint = [this]()  { return state().hasActionPoint(); };
+    pushBackStep(NeverAbort(), hasActionPoint, [this]() { return applyMovePlan(); }, "applying move plan");
 }
 
 MixTanksAndHealers::~MixTanksAndHealers()
@@ -129,8 +136,27 @@ MixTanksAndHealers::Destinations MixTanksAndHealers::getMoves(
 
     bool isStraightWay = true;
     for (const VehicleGroup* obstacle : obstacles)
-        if (isStraightWay && !ghost.isPathFree(to, Obstacle(*obstacle), m_iterationSize))
+    {
+        if (!isStraightWay)
+            break;
+
+        if (obstacle->m_units.empty())
+            continue;
+
+        if (!ghost.isPathFree(to, Obstacle(*obstacle), m_iterationSize))
             isStraightWay = false;
+
+        auto obstacleDestinations = m_overallMoves[obstacle->m_units.front().lock()->getType()];
+        for (const Point& nextPoint : obstacleDestinations)
+        {
+            if (!isStraightWay)
+                break;
+
+            VehicleGroupGhost obstacleDestination{ *obstacle, nextPoint - obstacle->m_center };   // todo: more careful collision detection and resolve for simultaneous moves
+            if (obstacleDestination.m_center != obstacleDestination.m_original.m_center)
+                isStraightWay = isStraightWay && ghost.isPathFree(to, Obstacle(obstacleDestination), m_iterationSize);
+        }
+    }
 
     if (isStraightWay)
         return Destinations({ to });
@@ -150,7 +176,7 @@ MixTanksAndHealers::Destinations MixTanksAndHealers::getMoves(
 		if (!xPart.empty() && !yPart.empty())
 		{
 			path.insert(path.end(), xPart.begin(), xPart.end());
-			path.insert(path.end(), xPart.begin(), xPart.end());
+			path.insert(path.end(), yPart.begin(), yPart.end());
 		}
 
         // try alt path: by Y and then by  X
@@ -163,8 +189,8 @@ MixTanksAndHealers::Destinations MixTanksAndHealers::getMoves(
         Destinations altPath;
 		if (!xPartAlt.empty() && !yPartAlt.empty())
 		{
-			altPath.insert(altPath.end(), xPart.begin(), xPart.end());
-			altPath.insert(altPath.end(), xPart.begin(), xPart.end());
+			altPath.insert(altPath.end(), xPartAlt.begin(), xPartAlt.end());
+			altPath.insert(altPath.end(), yPartAlt.begin(), yPartAlt.end());
 		}
 
         // choose shorter alternative
@@ -190,7 +216,7 @@ MixTanksAndHealers::Destinations MixTanksAndHealers::getMoves(
 		if (!xPart.empty() && !yPart.empty())
 		{
 			path.insert(path.end(), xPart.begin(), xPart.end());
-			path.insert(path.end(), xPart.begin(), xPart.end());
+			path.insert(path.end(), yPart.begin(), yPart.end());
 		}
     }
 	else if (dx != 0 && allowShifting)
@@ -209,7 +235,7 @@ MixTanksAndHealers::Destinations MixTanksAndHealers::getMoves(
 		if (!xPart.empty() && !yPart.empty())
 		{
 			path.insert(path.end(), xPart.begin(), xPart.end());
-			path.insert(path.end(), xPart.begin(), xPart.end());
+			path.insert(path.end(), yPart.begin(), yPart.end());
 		}
 	}
 
@@ -303,5 +329,43 @@ MixTanksAndHealers::GridPos MixTanksAndHealers::pointToPos(const Point& center)
 	Point relativeCenter = center - m_topLeftMargin - m_gridCellSize / 2;
 	GridPos pos = GridPos { static_cast<int>(relativeCenter.m_x / m_gridCellSize.m_x), static_cast<int>(relativeCenter.m_y / m_gridCellSize.m_y) };
 	return pos;
+}
+
+bool MixTanksAndHealers::applyMovePlan()
+{
+    auto hasActionPoint = [this]() { return state().hasActionPoint(); };
+
+    for (auto& typePlanPair : m_pendingMoves)
+    {
+        VehicleType type = typePlanPair.first;
+        const VehicleGroup& group = state().teammates(type);
+        auto& pathPoints = typePlanPair.second;
+
+        while (!pathPoints.empty() && !state().isMoveCommitted())
+        {
+            Point nextWaypoint = pathPoints.front();
+            if (group.m_center != nextWaypoint)
+            {
+                state().setSelectAction(group.m_rect, type);
+                
+                // LIFO order - this will be 3rd step after move
+                pushNextStep(NeverAbort(), hasActionPoint, [this]() { return applyMovePlan(); }, "applying move plan");
+
+                if (pathPoints.size() > 1)  // need to achieve current waypoint before steering to next one
+                    pushNextStep(NeverAbort(), WaitMove{ group, nextWaypoint }, DoNothing(), "wait until step finished", true);
+
+                // LIFO - this will be first step
+                auto doMove = [this, nextWaypoint, &group]() { state().setMoveAction(nextWaypoint - group.m_center); return true; };
+                pushNextStep(NeverAbort(), hasActionPoint, doMove, "applying move plan step");
+            }
+
+            pathPoints.pop_front();
+        }
+
+        if (state().isMoveCommitted())
+            break;
+    }
+
+    return true;
 }
 

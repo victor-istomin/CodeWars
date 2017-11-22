@@ -37,7 +37,8 @@ signed char* ReadBuffer::read(unsigned int byteCount) {
         pos = 0;
         
         receivedByteCount = socket.Receive(MAX_BUFFER_SIZE - buf.size());
-        buf.insert(buf.end(), socket.GetData(), socket.GetData() + receivedByteCount);
+        if (receivedByteCount > 0)
+            buf.insert(buf.end(), socket.GetData(), socket.GetData() + receivedByteCount);
     } while (receivedByteCount > 0);
     
     exit(10012);

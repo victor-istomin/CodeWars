@@ -29,6 +29,8 @@ namespace goals
         double m_iterationSize;
 		Point m_topLeftMargin;
 		Point m_gridCellSize;
+        MovePlan m_overallMoves;
+        MovePlan m_pendingMoves;
 
 		std::map<int, double> m_xGridToPos;   // convert column number to world position
 		std::map<int, double> m_yGridToPos;   // convert row number to world position
@@ -41,9 +43,17 @@ namespace goals
 		GridPos pointToPos(const Point& center);
 		Point   posToPoint(const GridPos& pos);
 
-        bool shiftIfv();
+        bool applyMovePlan();
 
         struct NeverAbort { bool operator()() { return false; } };
+        struct DoNothing  { bool operator()() { return true; } };
+
+        struct WaitMove   
+        { 
+            const VehicleGroup& group; 
+            Point destination; 
+            bool operator()() { return group.m_center == destination; }
+        };
 
     public:
         explicit MixTanksAndHealers(State& state);
