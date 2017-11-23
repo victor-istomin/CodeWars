@@ -10,6 +10,13 @@ class Goal
 protected:
     typedef std::function<bool()> Callback;
 
+	enum class StepType
+	{
+		INVALID_VALUE = 0,
+		ATOMIC,
+		ALLOW_MULTITASK
+	};
+
 private:
     struct Step;
     typedef std::unique_ptr<Step> StepPtr;
@@ -23,8 +30,10 @@ private:
         Callback    m_proceed;
         bool        m_isMultitaskPoint;
 
-        Step(Callback shouldAbort, Callback shouldProceed, Callback proceed, const char* debugName = nullptr, bool isMultitackPoint = false)
-            : m_shouldAbort(shouldAbort), m_shouldProceed(shouldProceed), m_proceed(proceed), m_debugName(debugName), m_isMultitaskPoint(isMultitackPoint) {}
+        Step(Callback shouldAbort, Callback shouldProceed, Callback proceed, const char* debugName = nullptr, StepType type = StepType::ATOMIC)
+            : m_shouldAbort(shouldAbort), m_shouldProceed(shouldProceed), m_proceed(proceed), m_debugName(debugName)
+			, m_isMultitaskPoint(type == StepType::ALLOW_MULTITASK) 
+		{}
     };
 
     std::list<StepPtr> m_steps;

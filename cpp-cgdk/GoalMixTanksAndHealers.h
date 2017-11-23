@@ -72,6 +72,8 @@ namespace goals
 		GridPos pointToPos(const Point& center);
 		Point   posToPoint(const GridPos& pos);
 
+		void setupGoalSteps();
+
         bool applyMovePlan();
         bool scaleGroups();
         bool mixGroups();

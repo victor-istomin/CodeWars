@@ -60,33 +60,7 @@ MixTanksAndHealers::MixTanksAndHealers(State& worldState)
 
     m_overallMoves = m_pendingMoves = movesByType;
 
-    auto hasActionPoint = [this]()  { return state().hasActionPoint(); };
-    pushBackStep(NeverAbort(), hasActionPoint, [this]() { return applyMovePlan(); }, "applying move plan");
-
-	// TODO !!! there is an issue on seed #1623792313246972 - can't find a path, aborting
-    assert(!movesByType[VehicleType::IFV].empty() && !movesByType[VehicleType::TANK].empty() && !movesByType[VehicleType::ARRV].empty());
-
-    const auto& ifvPlan  = movesByType[VehicleType::IFV];
-    const auto& tankPlan = movesByType[VehicleType::TANK];
-    const auto& arrvPlan = movesByType[VehicleType::ARRV];
-
-    const Point ifvDestination  = ifvPlan.empty() ? Point() : ifvPlan.back();
-    const Point tankDestination = tankPlan.empty() ? Point() : tankPlan.back();
-    const Point arrvDestination = arrvPlan.empty() ? Point() : arrvPlan.back();
-
-    auto isLineReady = [this, ifvDestination, tankDestination, arrvDestination]() 
-    { 
-        return state().hasActionPoint()
-            && state().teammates(VehicleType::ARRV).m_center == arrvDestination
-            && state().teammates(VehicleType::IFV).m_center == ifvDestination
-            && state().teammates(VehicleType::TANK).m_center == tankDestination;
-    };
-
-    pushBackStep(NeverAbort(), isLineReady, [this]() { return scaleGroups(); }, "scale groups");
-
-    auto waitAllStops = makeAnd({ WaitUntilStops(arrvGroup()), WaitUntilStops(ifvGroup()), WaitUntilStops(tankGroup()) });
-
-    pushBackStep(NeverAbort(), waitAllStops, [this]() { return mixGroups(); }, "mix groups");
+	setupGoalSteps();
 }
 
 MixTanksAndHealers::~MixTanksAndHealers()
@@ -391,11 +365,11 @@ bool MixTanksAndHealers::applyMovePlan()
             {
                 state().setSelectAction(group.m_rect, type);
                 
-                // LIFO order - this will be 3rd step after move
+                // LIFO order - this recursive call will be 3rd step after move
                 pushNextStep(NeverAbort(), hasActionPoint, [this]() { return applyMovePlan(); }, "applying move plan");
 
                 if (pathPoints.size() > 1)  // need to achieve current waypoint before steering to next one
-                    pushNextStep(NeverAbort(), WaitMove{ group, nextWaypoint }, DoNothing(), "wait until step finished", true);
+                    pushNextStep(NeverAbort(), WaitMove{ group, nextWaypoint }, DoNothing(), "wait until step finished", StepType::ALLOW_MULTITASK);
 
                 // LIFO - this will be first step
                 auto doMove = [this, nextWaypoint, &group]() { state().setMoveAction(nextWaypoint - group.m_center); return true; };
@@ -479,5 +453,37 @@ bool MixTanksAndHealers::mixGroups()
     pushNextStep(NeverAbort(), hasActionPoint, [this, moveVector]() { state().setMoveAction(moveVector); return true; }, "move arrv into tanks");
 
     return true;
+}
+
+
+void MixTanksAndHealers::setupGoalSteps()
+{
+	auto hasActionPoint = [this]() { return state().hasActionPoint(); };
+	pushBackStep(NeverAbort(), hasActionPoint, [this]() { return applyMovePlan(); }, "applying move plan");
+
+	// TODO !!! there is an issue on seed #1623792313246972 - can't find a path, aborting
+	assert(!m_overallMoves[VehicleType::IFV].empty() && !m_overallMoves[VehicleType::TANK].empty() && !m_overallMoves[VehicleType::ARRV].empty());
+
+	const auto& ifvPlan = m_overallMoves[VehicleType::IFV];
+	const auto& tankPlan = m_overallMoves[VehicleType::TANK];
+	const auto& arrvPlan = m_overallMoves[VehicleType::ARRV];
+
+	const Point ifvDestination = ifvPlan.empty() ? Point() : ifvPlan.back();
+	const Point tankDestination = tankPlan.empty() ? Point() : tankPlan.back();
+	const Point arrvDestination = arrvPlan.empty() ? Point() : arrvPlan.back();
+
+	auto isLineReady = [this, ifvDestination, tankDestination, arrvDestination]()
+	{
+		return state().hasActionPoint()
+			&& state().teammates(VehicleType::ARRV).m_center == arrvDestination
+			&& state().teammates(VehicleType::IFV).m_center == ifvDestination
+			&& state().teammates(VehicleType::TANK).m_center == tankDestination;
+	};
+
+	pushBackStep(NeverAbort(), isLineReady, [this]() { return scaleGroups(); }, "scale groups", StepType::ALLOW_MULTITASK);
+
+	auto waitAllStops = makeAnd({ WaitUntilStops(arrvGroup()), WaitUntilStops(ifvGroup()), WaitUntilStops(tankGroup()) });
+
+	pushBackStep(NeverAbort(), waitAllStops, [this]() { return mixGroups(); }, "mix groups", StepType::ALLOW_MULTITASK);
 }
 
