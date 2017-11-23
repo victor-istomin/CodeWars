@@ -1,6 +1,7 @@
 #include "GoalMixTanksAndHealers.h"
 #include "State.h"
 #include "VehicleGroup.h"
+#include "goalUtils.h"
 
 #include <map>
 #include <array>
@@ -20,22 +21,6 @@ namespace
         eFT_TANK_HEALER_IFV,
     };
 }
-
-class MixTanksAndHealers::WaitUntilStops
-{
-    const VehicleGroup& m_group;
-    Rect                m_previousRect;
-
-public:
-    explicit WaitUntilStops(const VehicleGroup& group) : m_group(group), m_previousRect(Point(-1,-1), Point(-1, -1)) {}
-
-    bool operator()() 
-    { 
-        bool isStopped = m_previousRect == m_group.m_rect; 
-        m_previousRect = m_group.m_rect; 
-        return isStopped; 
-    }
-};
 
 MixTanksAndHealers::MixTanksAndHealers(State& worldState)
     : Goal(worldState)

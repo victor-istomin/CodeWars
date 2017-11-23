@@ -78,18 +78,6 @@ namespace goals
         bool scaleGroups();
         bool mixGroups();
 
-        struct NeverAbort     { bool operator()() { return false; } };
-        struct DoNothing      { bool operator()() { return true; } };
-
-        class WaitUntilStops;
-
-        struct WaitMove   
-        { 
-            const VehicleGroup& group; 
-            Point destination; 
-            bool operator()() { return group.m_center == destination; }
-        };
-
     public:
         explicit MixTanksAndHealers(State& state);
 

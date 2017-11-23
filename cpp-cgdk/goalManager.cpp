@@ -22,7 +22,9 @@ void GoalManager::fillCurrentGoals()
     assert(std::is_sorted(m_currentGoals.begin(), m_currentGoals.end()) && "please keep goals sorted by-priority");
 }
 
-GoalManager::GoalManager(State& state) : m_state(state)
+GoalManager::GoalManager(State& state) 
+	: m_state(state)
+	, m_forcedGoal(nullptr)
 {
 
 }
@@ -40,32 +42,67 @@ void GoalManager::tick()
 {
     fillCurrentGoals();
 
-    if (!m_currentGoals.empty())
-    {
-        const GoalPtr& mostPriority = m_currentGoals.front().m_goal;
-        mostPriority->performStep(*this, false);
-        if (!mostPriority->inProgress())
-            m_currentGoals.pop_front();
-    }
-    else
-    {
-        NukeGoal dummy(m_state);
-        dummy.performStep(*this, false);
-    }
+	if (m_forcedGoal)
+	{
+		m_forcedGoal->performStep(*this, true);
+
+		if (!m_forcedGoal->inProgress())
+		{
+			auto forcedIt = std::find_if(m_currentGoals.begin(), m_currentGoals.end(), 
+				[this](const GoalHolder& holder) { return holder.m_goal.get() == m_forcedGoal; });
+			assert(forcedIt != m_currentGoals.end());
+
+			m_forcedGoal = nullptr;           // done, pause and remove
+			m_currentGoals.erase(forcedIt);
+		}
+
+		if (m_forcedGoal && m_forcedGoal->canPause())
+			m_forcedGoal = nullptr;           // just pause
+	}
+
+	if (!m_state.isMoveCommitted())
+	{
+		if (!m_currentGoals.empty())
+		{
+			const GoalPtr& mostPriority = m_currentGoals.front().m_goal;
+			mostPriority->performStep(*this, false);
+			if (!mostPriority->inProgress())
+			{
+				if (m_forcedGoal == m_currentGoals.front().m_goal.get())
+					m_forcedGoal = nullptr;
+
+				m_currentGoals.pop_front();
+			}
+		}
+		else
+		{
+			NukeGoal dummy(m_state);
+			dummy.performStep(*this, false);
+		}
+	}
 }
 
 void GoalManager::doMultitasking(const Goal* interruptedGoal)
 {
+	Goal* executedGoal = nullptr;
+
     for (const GoalHolder& goalHolder : m_currentGoals)
     {
-        if (!goalHolder.m_goal->isEligibleForBackgroundMode(interruptedGoal))
+		const GoalPtr& goal = goalHolder.m_goal;
+        if (!goal->isEligibleForBackgroundMode(interruptedGoal))
             continue;
 
         // TODO - need fix this in order to allow aircraft moves in background 2 steps, (select + move)
 
-        goalHolder.m_goal->performStep(*this, true);
-        if (m_state.isMoveCommitted())
-            break;   // one tick - one move
+        goal->performStep(*this, true);
+		if (m_state.isMoveCommitted())
+		{
+			executedGoal = goal.get();
+			break;   // one tick - one move
+		}
     }
+
+	if (executedGoal && !executedGoal->canPause())
+		m_forcedGoal = executedGoal;
 }
 

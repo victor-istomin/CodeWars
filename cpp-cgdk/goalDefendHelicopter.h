@@ -21,8 +21,11 @@ namespace goals
 
         bool doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackWith, const VehicleGroup& attackTarget);
 
+		virtual bool isCompatibleWith(const Goal* interrupted) override;
+
     public:
         DefendHelicopters(State& state);
-    };
+
+	};
 }
 

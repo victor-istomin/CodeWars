@@ -215,5 +215,8 @@
     <ClInclude Include="GoalMixTanksAndHealers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="goalUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

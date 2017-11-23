@@ -91,8 +91,15 @@ public:
     virtual ~Goal()                      {}
 
     bool inProgress()                    { return !m_steps.empty(); }
+	bool canPause()                      { return m_steps.empty() || m_steps.front()->m_isMultitaskPoint; }
 
-    bool isEligibleForBackgroundMode(const Goal* interrupted) { return this != interrupted && isCompatibleWith(interrupted); }
+    bool isEligibleForBackgroundMode(const Goal* interrupted) 
+	{ 
+		// ensure it will return execution
+		bool hasMultitaskPoint = std::find_if(m_steps.begin(), m_steps.end(), [](const StepPtr& step) { return step->m_isMultitaskPoint; }) != m_steps.end();
+
+		return this != interrupted && hasMultitaskPoint && isCompatibleWith(interrupted); 
+	}
 
     void performStep(GoalManager& goalManager, bool isBackgroundMode);
 };

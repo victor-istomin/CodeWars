@@ -30,6 +30,7 @@ class GoalManager
 
     State&                m_state;
     std::list<GoalHolder> m_currentGoals;
+	Goal*                 m_forcedGoal;
 
     void fillCurrentGoals();
 

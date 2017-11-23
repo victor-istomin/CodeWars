@@ -3,8 +3,12 @@
 #define PI 3.14159265358979323846
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <typeinfo>
 
 #include "goalDefendHelicopter.h"
+#include "GoalMixTanksAndHealers.h"
+#include "goalUtils.h"
+
 #include "state.h"
 
 #include "model/ActionType.h"
@@ -52,12 +56,14 @@ bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, c
 
     const Point& destination = attackPoints[0];
     Vec2d path = destination - attackWith.m_center;
-    state().setMoveAction(path);
+
+	state().setSelectAction(attackWith.m_rect, firstUnit->getType());
+	pushNextStep(shouldAbort, [this] {return hasActionPoint(); }, [this, path]() { state().setMoveAction(path); return true; }, "make attack move");
 
     static const int MIN_TICKS_GAP = 10;
     int nTicksGap = std::max(MIN_TICKS_GAP, static_cast<int>(path.length() / firstUnit->getMaxSpeed() / 4));
 
-    pushBackStep(shouldAbort, WaitSomeTicks{ nTicksGap }, DoNothing(), "wait next attack");
+    pushBackStep(shouldAbort, WaitSomeTicks{ nTicksGap }, DoNothing(), "wait next attack", StepType::ALLOW_MULTITASK);
     pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicopters::doAttack, this, shouldAbort, shouldProceed, std::cref(attackWith), std::cref(attackTarget)), "attack again");
     return true;
 }
@@ -141,38 +147,33 @@ DefendHelicopters::DefendHelicopters(State& state)
 
 			return helicopters.isPathFree(ifvCenter, Obstacle(fightersGhost), m_helicopterIteration)
 				&& fighters.isPathFree(solution, Obstacle(helicopters), m_helicopterIteration);
-//             // TODO - refactor to isPathFree
-//             return VehicleGroup::canMoveRectTo(helicoptersCenter, ifvCenter, helicopters.m_rect, fighters.m_rect + solutionPath, m_helicopterIteration)
-//                 && VehicleGroup::canMoveRectTo(fighterCenter, solution, fighters.m_rect, helicopters.m_rect, m_helicopterIteration);
         });
 
-        const Point solution    = solutionIt != std::end(solutions) ? *solutionIt : *std::rbegin(solutions);
-        const Vec2d solutonPath = Vec2d::fromPoint(solution - fighterCenter);
+        const Point solution     = solutionIt != std::end(solutions) ? *solutionIt : *std::rbegin(solutions);
+        const Vec2d solutionPath = Vec2d::fromPoint(solution - fighterCenter);
 
-        this->pushNextStep(abortCheckFn, hasActionPointFn, [solutonPath, this]() { this->state().setMoveAction(solutonPath); return true; }, "move fighters");
+        this->pushNextStep(abortCheckFn, hasActionPointFn, [solutionPath, this]() { this->state().setMoveAction(solutionPath); return true; }, "move fighters");
 
         return true;
     };
 
-    auto selectHelicopters = [this]() { this->state().setSelectAction(helicopterGroup().m_rect, VehicleType::HELICOPTER); return true; };
-
-    auto moveToJoinPoint = [this]()
+    auto moveToJoinPoint = [this, hasActionPointFn, abortCheckFn]()
     {
         const Point joinPoint  = ifvGroup().m_center;
         const Point selfCenter = helicopterGroup().m_center;
 
-        double distanceTo = selfCenter.getDistanceTo(joinPoint);
-        double eta        = distanceTo / this->state().game()->getHelicopterSpeed();   // TODO : use correct prediction
+		this->state().setSelectAction(helicopterGroup().m_rect, VehicleType::HELICOPTER);
 
-        this->state().setMoveAction(joinPoint - selfCenter);
+		Vec2d movement = joinPoint - selfCenter;
+		pushNextStep(abortCheckFn, hasActionPointFn, [this, movement]() { this->state().setMoveAction(movement); return true; }, "move helicopters to IFV");
+
         return true;
     };
 
-    auto canMove = [this, isPathToIfvFree]() { return hasActionPoint() && isPathToIfvFree(); };
+    pushBackStep(abortCheckFn, hasActionPointFn, shiftAircraft, "ensure no aircraft collision");
 
-    pushBackStep(abortCheckFn, hasActionPointFn, shiftAircraft,     "ensure no aircraft collision");
-    pushBackStep(abortCheckFn, canMove,          selectHelicopters, "select helicopters");
-    pushBackStep(abortCheckFn, hasActionPointFn, moveToJoinPoint,   "move helicopters to IFV");
+    auto canMoveHelicopters = [this, isPathToIfvFree]() { return hasActionPoint() && isPathToIfvFree(); };
+	pushBackStep(abortCheckFn, canMoveHelicopters, moveToJoinPoint,   "move helicopters to IFV", StepType::ALLOW_MULTITASK);
 
     auto prepareAircraft = [this, abortCheckFn, hasActionPointFn]()
     {
@@ -234,6 +235,7 @@ DefendHelicopters::DefendHelicopters(State& state)
                         && fighterGroup().isPathFree(defendDestination, Obstacle(helicopterGroup()), m_helicopterIteration);
                 };
 
+				// TODO: allow multitask here!
                 this->pushNextStep(abortCheckFn, ready, [this, finalPath]() { this->state().setMoveAction(finalPath); return true; }, "fighter: defend helicopters");
             }
         }
@@ -242,13 +244,10 @@ DefendHelicopters::DefendHelicopters(State& state)
     };
 
     auto selectFighters = [this]() { this->state().setSelectAction(fighterGroup().m_rect, VehicleType::FIGHTER); return true; };
-    auto helicoptersReady = [this, hasActionPointFn]() 
-    { 
-        double distanceToIfv = helicopterGroup().m_center.getDistanceTo(ifvGroup().m_center);
-        return hasActionPointFn() && distanceToIfv < 1; 
-    };
 
-    pushBackStep(abortCheckFn, helicoptersReady, selectFighters,  "select fighters");
+	pushBackStep(abortCheckFn, WaitUntilStops(helicopterGroup()), DoNothing(), "finish helicopters move", StepType::ALLOW_MULTITASK);
+
+    pushBackStep(abortCheckFn, hasActionPointFn, selectFighters,  "select fighters");
     pushBackStep(abortCheckFn, hasActionPointFn, prepareAircraft, "fighter: prepare defend pos");
 
 	const auto& fighters = fighterGroup();
@@ -288,7 +287,12 @@ DefendHelicopters::DefendHelicopters(State& state)
         return isNear(fighterGroup(), allienFighters(), 3 * fighterGroup().m_rect.width());
     };
 
+	pushBackStep(abortCheckFn, shouldStartAttack, selectFighters, "select fighters for attack", StepType::ALLOW_MULTITASK);
 	pushBackStep(abortCheckFn, shouldStartAttack, doAttackFighters, "fighter: start attacking enemy fighters");
 }
 
+bool DefendHelicopters::isCompatibleWith(const Goal* interrupted)
+{
+	return typeid(*interrupted) == typeid(MixTanksAndHealers);
+}
 
