@@ -61,6 +61,7 @@ protected:
 
     const VehicleGroup& ifvGroup()          const { return m_state.teammates(model::VehicleType::IFV); }
     const VehicleGroup& tankGroup()         const { return m_state.teammates(model::VehicleType::TANK); }
+    const VehicleGroup& arrvGroup()         const { return m_state.teammates(model::VehicleType::ARRV); }
     const VehicleGroup& helicopterGroup()   const { return m_state.teammates(model::VehicleType::HELICOPTER); }
     const VehicleGroup& fighterGroup()      const { return m_state.teammates(model::VehicleType::FIGHTER); }
     const VehicleGroup& allienFighters()    const { return m_state.alliens(model::VehicleType::FIGHTER); }

@@ -69,5 +69,7 @@ struct Rect
 
     Rect& operator+=(const Vec2d& v)                       { m_topLeft += v.toPoint<Point>(); m_bottomRight += v.toPoint<Point>(); return *this; }
     friend Rect operator+(Rect rect, const Vec2d& v)       { return rect += v; }
+
+    bool operator==(const Rect& right) const               { return m_topLeft == right.m_topLeft && m_bottomRight == right.m_bottomRight; }
 };
 

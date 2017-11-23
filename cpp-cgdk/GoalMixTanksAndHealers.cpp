@@ -21,6 +21,22 @@ namespace
     };
 }
 
+class MixTanksAndHealers::WaitUntilStops
+{
+    const VehicleGroup& m_group;
+    Rect                m_previousRect;
+
+public:
+    explicit WaitUntilStops(const VehicleGroup& group) : m_group(group), m_previousRect(Point(-1,-1), Point(-1, -1)) {}
+
+    bool operator()() 
+    { 
+        bool isStopped = m_previousRect == m_group.m_rect; 
+        m_previousRect = m_group.m_rect; 
+        return isStopped; 
+    }
+};
+
 MixTanksAndHealers::MixTanksAndHealers(State& worldState)
     : Goal(worldState)
     , m_iterationSize( std::min( {worldState.game()->getArrvSpeed(), worldState.game()->getTankSpeed(), worldState.game()->getIfvSpeed()} ) / 2.0 )
@@ -67,6 +83,10 @@ MixTanksAndHealers::MixTanksAndHealers(State& worldState)
     };
 
     pushBackStep(NeverAbort(), isLineReady, [this]() { return scaleGroups(); }, "scale groups");
+
+    auto waitAllStops = makeAnd({ WaitUntilStops(arrvGroup()), WaitUntilStops(ifvGroup()), WaitUntilStops(tankGroup()) });
+
+    pushBackStep(NeverAbort(), waitAllStops, [this]() { return mixGroups(); }, "mix groups");
 }
 
 MixTanksAndHealers::~MixTanksAndHealers()
@@ -430,7 +450,7 @@ bool MixTanksAndHealers::scaleGroups()
 
 	// reverse iteration due to LIFO pushing order
 	double xDisplacement     = leftDisplacementForCell * typesCount;
-	double yArrvDisplacement = 3 /* TODO: it's a kind of magic? */ * tankGroup().m_units.front().lock()->getRadius();
+	double yArrvDisplacement = 3.3 /* TODO: it's a kind of magic? */ * tankGroup().m_units.front().lock()->getRadius();
 	const double scaleFactor = 1.7;
 	for (auto itType = std::rbegin(groupsLeftToRight); itType != std::rend(groupsLeftToRight); ++itType)
 	{
@@ -439,6 +459,24 @@ bool MixTanksAndHealers::scaleGroups()
 		pushNextStep(NeverAbort(), hasActionPoint, getScaleFn(*itType, scaleFactor, scaleDisplacement), "scale unit");
 		xDisplacement -= leftDisplacementForCell;
 	}
+
+    return true;
+}
+
+bool MixTanksAndHealers::mixGroups()
+{
+    const VehicleGroup& arrv = arrvGroup();
+    const VehicleGroup& tank = tankGroup();
+
+
+    state().setSelectAction(arrvGroup().m_rect, VehicleType::ARRV);
+    
+    auto hasActionPoint = [this]() { return state().hasActionPoint(); };
+    
+    Point newArrvPos = Point{ tank.m_center.m_x, arrv.m_center.m_y };
+    Vec2d moveVector = newArrvPos - arrv.m_center;
+
+    pushNextStep(NeverAbort(), hasActionPoint, [this, moveVector]() { state().setMoveAction(moveVector); return true; }, "move arrv into tanks");
 
     return true;
 }

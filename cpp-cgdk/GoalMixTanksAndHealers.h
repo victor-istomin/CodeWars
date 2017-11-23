@@ -9,6 +9,35 @@
 
 namespace goals
 {
+    template <typename Functor> class And
+    {
+        std::list<Functor> m_array;
+
+    public:
+
+        template <typename FunctorArray, size_t size>
+        And(FunctorArray const (&functors)[size])
+        {
+            for (auto& a : functors)
+                m_array.emplace_back(a);
+        }
+
+        bool operator()()
+        {
+            for (auto& item : m_array)
+                if (!item())
+                    return false;
+
+            return true;
+        }
+    };
+
+    template <typename FunctorArray, size_t size>
+    And<FunctorArray> makeAnd(FunctorArray const (&functors)[size])
+    { 
+        return And<FunctorArray>(functors);
+    }
+
     class MixTanksAndHealers : public Goal
     {
         struct GridPos
@@ -45,9 +74,12 @@ namespace goals
 
         bool applyMovePlan();
         bool scaleGroups();
+        bool mixGroups();
 
-        struct NeverAbort { bool operator()() { return false; } };
-        struct DoNothing  { bool operator()() { return true; } };
+        struct NeverAbort     { bool operator()() { return false; } };
+        struct DoNothing      { bool operator()() { return true; } };
+
+        class WaitUntilStops;
 
         struct WaitMove   
         { 
