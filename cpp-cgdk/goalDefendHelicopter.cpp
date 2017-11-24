@@ -33,14 +33,15 @@ bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, c
     double aerialAttackRange = firstUnit->getAerialAttackRange();
     double radius = firstUnit->getRadius();
 
-    const Point& displacement1 = Point(  aerialAttackRange - radius,  aerialAttackRange - radius) / sqrt2;
-    const Point& displacement2 = Point(-(aerialAttackRange - radius), aerialAttackRange - radius) / sqrt2;
-    const Point& displacement3 = Point(  aerialAttackRange - radius,  -(aerialAttackRange - radius)) / sqrt2;
-    const Point& displacement4 = Point(-(aerialAttackRange - radius), -(aerialAttackRange - radius)) / sqrt2;
+    const Point& displacement1 = Point(  aerialAttackRange - radius,  aerialAttackRange - radius) / sqrt2 / 1.5;
+    const Point& displacement2 = Point(-(aerialAttackRange - radius), aerialAttackRange - radius) / sqrt2 / 1.5;
+    const Point& displacement3 = Point(  aerialAttackRange - radius,  -(aerialAttackRange - radius)) / sqrt2 / 1.5;
+    const Point& displacement4 = Point(-(aerialAttackRange - radius), -(aerialAttackRange - radius)) / sqrt2 / 1.5;
 
     Point attackPoints[] = 
     { 
         attackTarget.m_center, 
+
         attackRect.m_topLeft, attackRect.m_bottomRight, attackRect.bottomLeft(), attackRect.topRight(),
         attackRect.m_topLeft + displacement1, attackRect.m_bottomRight + displacement1, attackTarget.m_center + displacement1,
         attackRect.bottomLeft() + displacement1, attackRect.topRight() + displacement1,
@@ -284,7 +285,7 @@ DefendHelicopters::DefendHelicopters(State& state)
     
     auto shouldStartAttack = [&isNear, &isReadyForAttack, this]()
     {
-        return isNear(fighterGroup(), allienFighters(), 3 * fighterGroup().m_rect.width());
+        return isNear(fighterGroup(), allienFighters(), 5 * fighterGroup().m_rect.width());
     };
 
 	pushBackStep(abortCheckFn, shouldStartAttack, selectFighters, "select fighters for attack", StepType::ALLOW_MULTITASK);

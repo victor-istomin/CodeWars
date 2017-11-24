@@ -231,7 +231,7 @@ bool GoalDefendTank::loopFithersAttack()
     if (target.m_units.empty() || fighters.m_units.empty() || tankGroup().m_units.empty())
         return true;
 
-    Point targetPoint = target.m_rect.m_bottomRight;
+    Point targetPoint = target.m_center;
 
     Rect fightersPosRect = fighters.m_rect + (targetPoint - fighters.m_center);
     
