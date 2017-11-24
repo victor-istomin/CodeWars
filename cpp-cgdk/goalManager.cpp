@@ -29,6 +29,8 @@ void GoalManager::fillCurrentGoals()
 		{
 			m_currentGoals.splice(m_currentGoals.end(), m_waitingInsetrion);
 		}
+
+		m_currentGoals.sort();
 	}
 
     assert(std::is_sorted(m_currentGoals.begin(), m_currentGoals.end()) && "please keep goals sorted by-priority");
