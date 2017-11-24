@@ -36,6 +36,7 @@ private:
     State& m_state;
     Goals  m_currentGoals;
 	Goal*  m_forcedGoal;
+	Goals  m_waitingInsetrion;
 
     void fillCurrentGoals();
 
@@ -45,7 +46,9 @@ public:
     void tick();
     void doMultitasking(const Goal* interruptedGoal);
 
-    const Goals& currentGoals() const { return m_currentGoals; }
+	void insertGoal(int priority, GoalPtr&& goal)                  { m_waitingInsetrion.emplace_back(priority, std::move(goal)); }
+
+    const Goals& currentGoals() const                              { return m_currentGoals; }
 };
 
 

@@ -29,12 +29,13 @@ public:
 
 private:
 
-    VehicleByID m_vehicles;
-    IdList      m_selection;
-    GroupByType m_alliens;
-    GroupByType m_teammates;
-    bool        m_isMoveCommitted;
+    VehicleByID   m_vehicles;
+    IdList        m_selection;
+    GroupByType   m_alliens;
+    GroupByType   m_teammates;
+    bool          m_isMoveCommitted;
 
+    const VehicleGroup* m_nuclearGuide;
 
     const model::World*  m_world;
     const model::Player* m_player;
@@ -52,6 +53,8 @@ private:
     };
 
 public:
+
+    State() : m_isMoveCommitted(false), m_nuclearGuide(nullptr) {}
 
     Constants& constants() { return *m_constants; }
 
