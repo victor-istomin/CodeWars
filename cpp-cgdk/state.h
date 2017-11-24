@@ -25,13 +25,16 @@ public:
     typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
     typedef std::map<Id, VehiclePtr>                      VehicleByID;
     typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;
+    typedef std::vector<Id>                               IdList;
 
 private:
 
     VehicleByID m_vehicles;
+    IdList      m_selection;
     GroupByType m_alliens;
     GroupByType m_teammates;
     bool        m_isMoveCommitted;
+
 
     const model::World*  m_world;
     const model::Player* m_player;
@@ -115,6 +118,19 @@ public:
 
         for (auto& group : m_alliens)
             group.second.update();
+
+        IdList selection;
+        selection.reserve(m_vehicles.size());
+
+        for (const auto& idPointnerPair : m_vehicles)
+        {
+            const VehiclePtr& vehicle = idPointnerPair.second;
+            if (vehicle->getPlayerId() == me.getId() && vehicle->isSelected())
+                selection.push_back(vehicle->getId());
+        }
+
+        std::sort(selection.begin(), selection.end());
+        m_selection = std::move(selection);
     }
     
     void setSelectAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_)
@@ -130,6 +146,28 @@ public:
         m_move->setRight(rect.m_bottomRight.m_x);
 
         m_isMoveCommitted = true;
+    }
+
+    void setSelectAction(const VehicleGroup& group)
+    {
+        bool isSomethingToSelect = !group.m_units.empty();
+
+        if (!m_selection.empty())
+        {
+            IdList desiredSelection;
+            desiredSelection.reserve(group.m_units.size());
+
+            for (const VehicleCache& unitCache : group.m_units)
+                desiredSelection.push_back(unitCache.lock()->getId());
+
+            std::sort(desiredSelection.begin(), desiredSelection.end());
+
+            if (desiredSelection == m_selection)
+                isSomethingToSelect = false;  // already selected
+        }
+
+        if (isSomethingToSelect)
+            setSelectAction(group.m_rect, group.m_units.front().lock()->getType());
     }
 
     void setAddToSelectionAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_)

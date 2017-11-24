@@ -57,7 +57,7 @@ bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, c
     const Point& destination = attackPoints[0];
     Vec2d path = destination - attackWith.m_center;
 
-	state().setSelectAction(attackWith.m_rect, firstUnit->getType());
+	state().setSelectAction(attackWith);
 	pushNextStep(shouldAbort, [this] {return hasActionPoint(); }, [this, path]() { state().setMoveAction(path); return true; }, "make attack move");
 
     static const int MIN_TICKS_GAP = 10;
@@ -97,7 +97,7 @@ DefendHelicopters::DefendHelicopters(State& state)
 
         // select and move fighters in order to avoid mid-air collision
 
-        this->state().setSelectAction(fighters.m_rect, VehicleType::FIGHTER);
+        this->state().setSelectAction(fighters);
 
         const double near = 1.2;
         const double far  = 2.4;
@@ -162,7 +162,7 @@ DefendHelicopters::DefendHelicopters(State& state)
         const Point joinPoint  = ifvGroup().m_center;
         const Point selfCenter = helicopterGroup().m_center;
 
-		this->state().setSelectAction(helicopterGroup().m_rect, VehicleType::HELICOPTER);
+		this->state().setSelectAction(helicopterGroup());
 
 		Vec2d movement = joinPoint - selfCenter;
 		pushNextStep(abortCheckFn, hasActionPointFn, [this, movement]() { this->state().setMoveAction(movement); return true; }, "move helicopters to IFV");
@@ -243,7 +243,7 @@ DefendHelicopters::DefendHelicopters(State& state)
         return true;
     };
 
-    auto selectFighters = [this]() { this->state().setSelectAction(fighterGroup().m_rect, VehicleType::FIGHTER); return true; };
+    auto selectFighters = [this]() { this->state().setSelectAction(fighterGroup()); return true; };
 
 	pushBackStep(abortCheckFn, WaitUntilStops(helicopterGroup()), DoNothing(), "finish helicopters move", StepType::ALLOW_MULTITASK);
 

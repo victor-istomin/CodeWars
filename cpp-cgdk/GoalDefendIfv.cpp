@@ -71,7 +71,7 @@ bool GoalDefendIfv::shiftAircraft()
 
     if (!correctSolutons.empty())
     {
-        state().setSelectAction(fighters.m_rect, VehicleType::FIGHTER);
+        state().setSelectAction(fighters);
 
         Point bestSolution = correctSolutons.front();
         pushNextStep([this]() { return abortCheck(); },
@@ -88,7 +88,7 @@ bool GoalDefendIfv::shiftAircraft()
 
 bool GoalDefendIfv::moveHelicopters()
 {
-    state().setSelectAction(helicopterGroup().m_rect, VehicleType::HELICOPTER);
+    state().setSelectAction(helicopterGroup());
 
     pushNextStep([this]() { return abortCheck(); },
                  [this]() { return state().hasActionPoint(); },

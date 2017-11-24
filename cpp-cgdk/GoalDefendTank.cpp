@@ -79,7 +79,7 @@ bool GoalDefendTank::resolveFightersHelicoptersConflict()
 
         if (fighterSolution.length() > Point::k_epsilon)
         {
-            state().setSelectAction(fighters.m_rect, VehicleType::FIGHTER);
+            state().setSelectAction(fighters);
 
             // next steps will be actually pushed in LIFO order! So, start move and then wait
 
@@ -92,7 +92,7 @@ bool GoalDefendTank::resolveFightersHelicoptersConflict()
         }
         else if (helicopterSolution.length() > Point::k_epsilon)
         {
-            state().setSelectAction(helicopters.m_rect, VehicleType::HELICOPTER);
+            state().setSelectAction(helicopters);
 
             // next steps will be actually pushed in LIFO order! So, start move and then wait
 
@@ -180,7 +180,7 @@ bool GoalDefendTank::shiftAircraft()
 
     if (!correctSolutons.empty())
     {
-        state().setSelectAction(fighters.m_rect, VehicleType::FIGHTER);
+        state().setSelectAction(fighters);
 
         Point bestSolution = correctSolutons.front();
         pushNextStep([this]() { return abortCheck(); }, 
@@ -196,7 +196,7 @@ bool GoalDefendTank::shiftAircraft()
 
 bool GoalDefendTank::moveHelicopters()
 {
-    state().setSelectAction(helicopterGroup().m_rect, VehicleType::HELICOPTER);
+    state().setSelectAction(helicopterGroup());
     
     pushNextStep([this]() { return abortCheck(); },
                  [this]() { return state().hasActionPoint(); },
@@ -210,7 +210,7 @@ bool GoalDefendTank::startFightersAttack()
 {
     if (fighterGroup().m_center.getDistanceTo(allienHelicopters().m_center) <= m_maxAgressiveDistance)
     {
-        state().setSelectAction(fighterGroup().m_rect, VehicleType::FIGHTER);
+        state().setSelectAction(fighterGroup());
 
         pushNextStep([this]() { return abortCheck(); },
             [this]() { return state().hasActionPoint(); },

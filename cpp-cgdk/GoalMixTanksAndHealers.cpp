@@ -348,7 +348,7 @@ bool MixTanksAndHealers::applyMovePlan()
             Point nextWaypoint = pathPoints.front();
             if (group.m_center != nextWaypoint)
             {
-                state().setSelectAction(group.m_rect, type);
+                state().setSelectAction(group);
                 
                 // LIFO order - this recursive call will be 3rd step after move
                 pushNextStep(NeverAbort(), hasActionPoint, [this]() { return applyMovePlan(); }, "applying move plan");
@@ -392,7 +392,7 @@ bool MixTanksAndHealers::scaleGroups()
             const VehicleGroup& group = state().teammates(type);
             Point center = (group.m_rect.bottomLeft() + group.m_rect.m_bottomRight) / 2 + displacement;
 
-            state().setSelectAction(group.m_rect, type);
+            state().setSelectAction(group);
             pushNextStep(NeverAbort(), hasActionPoint, [this, center, factor]() { state().setScaleAction(factor, center); return true; }, "scaling");
             
             return true;
@@ -428,7 +428,7 @@ bool MixTanksAndHealers::mixGroups()
     const VehicleGroup& tank = tankGroup();
 
 
-    state().setSelectAction(arrvGroup().m_rect, VehicleType::ARRV);
+    state().setSelectAction(arrvGroup());
     
     auto hasActionPoint = [this]() { return state().hasActionPoint(); };
     
