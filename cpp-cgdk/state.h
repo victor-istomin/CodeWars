@@ -53,7 +53,7 @@ private:
 
 public:
 
-    Constants& constants() { return *m_constants; }    
+    Constants& constants() { return *m_constants; }
 
     bool                  hasVehicleById(Id id) const { return m_vehicles.find(id) != m_vehicles.end(); }
     const model::Vehicle& vehicleById(Id id)    const { return *m_vehicles.find(id)->second; }
