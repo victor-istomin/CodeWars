@@ -13,7 +13,7 @@ void GoalManager::fillCurrentGoals()
     {
         m_currentGoals.emplace_back(0, std::make_unique<goals::MixTanksAndHealers>(m_state));
         m_currentGoals.emplace_back(1, std::make_unique<goals::DefendHelicopters>(m_state));
-        m_currentGoals.emplace_back(2, std::make_unique<goals::GoalDefendTank>(m_state));
+        m_currentGoals.emplace_back(2, std::make_unique<goals::GoalDefendTank>(m_state, *this));
         m_currentGoals.emplace_back(3, std::make_unique<goals::GoalDefendIfv>(m_state));
 
         m_currentGoals.sort();
@@ -102,7 +102,10 @@ void GoalManager::doMultitasking(const Goal* interruptedGoal)
 		}
     }
 
-	if (executedGoal && !executedGoal->canPause())
+	if (executedGoal && executedGoal->inProgress() && !executedGoal->canPause())
 		m_forcedGoal = executedGoal;
+
+    // purge finished goals
+    m_currentGoals.remove_if([](const GoalHolder& holder) { return !holder.m_goal->inProgress(); });
 }
 

@@ -12,6 +12,7 @@
 
 class GoalManager
 {
+public:
     typedef std::unique_ptr<Goal> GoalPtr;
 
     struct GoalHolder
@@ -19,7 +20,7 @@ class GoalManager
         const int m_priority;
         GoalPtr   m_goal;
 
-        GoalHolder(int priority, GoalPtr&& goal)        : m_priority(priority), m_goal(std::move(goal))     {}
+        GoalHolder(int priority, GoalPtr&& goal) : m_priority(priority), m_goal(std::move(goal)) {}
 
         bool operator<(const GoalHolder& right)
         {
@@ -28,9 +29,13 @@ class GoalManager
         }
     };
 
-    State&                m_state;
-    std::list<GoalHolder> m_currentGoals;
-	Goal*                 m_forcedGoal;
+    typedef std::list<GoalHolder> Goals;
+
+private:
+
+    State& m_state;
+    Goals  m_currentGoals;
+	Goal*  m_forcedGoal;
 
     void fillCurrentGoals();
 
@@ -39,6 +44,8 @@ public:
 
     void tick();
     void doMultitasking(const Goal* interruptedGoal);
+
+    const Goals& currentGoals() const { return m_currentGoals; }
 };
 
 

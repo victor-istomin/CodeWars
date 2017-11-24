@@ -1,5 +1,6 @@
 #pragma once
 #include "goal.h"
+#include "forwardDeclarations.h"
 
 namespace goals
 {
@@ -17,6 +18,8 @@ namespace goals
         int          m_lastConflictTick = 0;
         int          m_lastAttackTick   = 0;
 
+        const GoalManager& m_goalManager;
+
         bool abortCheck() const;
         bool isHelicoptersBeaten() const;
         
@@ -27,8 +30,10 @@ namespace goals
 
         bool loopFithersAttack();
 
+        virtual bool isCompatibleWith(const Goal* interrupted) override;
+
     public:
-        GoalDefendTank(State& state);
+        GoalDefendTank(State& state, const GoalManager& goalManager);
         ~GoalDefendTank();
     };
 }

@@ -4,6 +4,10 @@
 
 #include "state.h"
 #include "VehicleGroup.h"
+#include "GoalMixTanksAndHealers.h"
+#include "goalDefendHelicopter.h"
+#include "goalManager.h"
+#include "goalUtils.h"
 
 #include <vector>
 #include <algorithm>
@@ -75,7 +79,7 @@ bool GoalDefendTank::resolveFightersHelicoptersConflict()
                 || !fighters.m_rect.overlaps(helicopters.m_rect);
         };
 
-        auto doNothing = []() { return true; };
+        // TODO: apply both for better confidence?
 
         if (fighterSolution.length() > Point::k_epsilon)
         {
@@ -83,7 +87,7 @@ bool GoalDefendTank::resolveFightersHelicoptersConflict()
 
             // next steps will be actually pushed in LIFO order! So, start move and then wait
 
-            pushNextStep([this]() { return abortCheck(); }, waitUntilNoCollision, doNothing, "dt: wait for fighter collision resolve");
+            pushNextStep([this]() { return abortCheck(); }, waitUntilNoCollision, DoNothing(), "dt: wait for fighter collision resolve", StepType::ALLOW_MULTITASK);
 
             pushNextStep([this]() { return abortCheck(); },
                          [this]() { return state().hasActionPoint(); },
@@ -96,15 +100,14 @@ bool GoalDefendTank::resolveFightersHelicoptersConflict()
 
             // next steps will be actually pushed in LIFO order! So, start move and then wait
 
-            pushNextStep([this]() { return abortCheck(); }, waitUntilNoCollision, doNothing, "dt: wait for helicopter collision resolve");
+            pushNextStep([this]() { return abortCheck(); }, waitUntilNoCollision, DoNothing(), "dt: wait for helicopter collision resolve", StepType::ALLOW_MULTITASK);
 
             pushNextStep([this]() { return abortCheck(); },
                          [this]() { return state().hasActionPoint(); },
                          [this, helicopterSolution]() { state().setMoveAction(helicopterSolution); return true; },
                          "dt: resolve collision - move helicopters away");
         }
-    }
-    
+    }    
 
     return true;
 }
@@ -210,12 +213,10 @@ bool GoalDefendTank::startFightersAttack()
 {
     if (fighterGroup().m_center.getDistanceTo(allienHelicopters().m_center) <= m_maxAgressiveDistance)
     {
-        state().setSelectAction(fighterGroup());
-
         pushNextStep([this]() { return abortCheck(); },
-            [this]() { return state().hasActionPoint(); },
-            [this]() { return loopFithersAttack(); },
-            "fighters: defend tank - attack enemy");
+                     [this]() { return state().hasActionPoint(); },
+                     [this]() { return loopFithersAttack(); },
+                     "fighters: defend tank - attack enemy");
     }
 
     return true;
@@ -269,9 +270,9 @@ bool GoalDefendTank::loopFithersAttack()
             targetPoint = *solutionIt;
     }
        
-    state().setMoveAction(targetPoint - fighters.m_center); 
+    Vec2d movement = targetPoint - fighters.m_center;
 
-    // next 2 steps are pushed in LIFO order, so first wait then attack again
+    // next 4 steps are pushed in LIFO order, so: 1) select; 2) attack; 3) wait; 4) loop again
 
     const int WAIT_AMOINT = 10;
 
@@ -281,17 +282,28 @@ bool GoalDefendTank::loopFithersAttack()
                  "fighters: defend tank - loop attack enemy");
 
     pushNextStep([this]() { return abortCheck(); }, WaitSomeTicks{ WAIT_AMOINT }, []() { return true; }, 
-                 "fighters: defend tank - wait for next iteration");
+                 "fighters: defend tank - wait for next iteration", StepType::ALLOW_MULTITASK);
+
+    pushNextStep([this]() { return abortCheck(); },
+                 [this]() { return state().hasActionPoint(); },
+                 [this, movement]() { state().setMoveAction(movement); return true; },
+                 "fighters: defend tank - attack move");
+
+    pushNextStep([this]() { return abortCheck(); },
+                 [this]() { return state().hasActionPoint(); },
+                 [this, &fighters]() { state().setSelectAction(fighters); return true; },
+                 "fighters: defend tank - select fighters");
 
     m_lastAttackTick = state().world()->getTickIndex();
     return true;
 }
 
 
-GoalDefendTank::GoalDefendTank(State& strategyState)
+GoalDefendTank::GoalDefendTank(State& strategyState, const GoalManager& goalManager)
     : Goal(strategyState)
     , m_helicopterIteration(std::min(strategyState.constants().m_helicoprerRadius, strategyState.game()->getHelicopterSpeed()) / 2)
     , m_maxAgressiveDistance(strategyState.world()->getWidth() / 4)   // slightly less than half of path from center to me
+    , m_goalManager(goalManager)
 {
     Callback abortCheckFn       = [this]() { return abortCheck(); };
     Callback hasActionPointFn   = [this]() { return state().hasActionPoint(); };
@@ -306,14 +318,14 @@ GoalDefendTank::GoalDefendTank(State& strategyState)
 
     pushBackStep(abortCheckFn, hasActionPointFn,   [this]() { return resolveFightersHelicoptersConflict(); }, "defend tank: ensure no conflicts");
     pushBackStep(abortCheckFn, hasActionPointFn,   [this]() { return shiftAircraft(); }, "defend tank: shift aircraft");
-    pushBackStep(abortCheckFn, canMoveHelicopters, [this]() { return moveHelicopters(); }, "defend tank: move helicopters");
+    pushBackStep(abortCheckFn, canMoveHelicopters, [this]() { return moveHelicopters(); }, "defend tank: move helicopters", StepType::ALLOW_MULTITASK);
 
     auto shouldStart = [this, hasActionPointFn]() 
     { 
         return hasActionPointFn && fighterGroup().m_center.getDistanceTo(allienHelicopters().m_center) <= m_maxAgressiveDistance; 
     };
 
-    pushBackStep(abortCheckFn, shouldStart,   [this]() { return startFightersAttack(); }, "defend tank: attack helicopters");
+    pushBackStep(abortCheckFn, shouldStart,   [this]() { return startFightersAttack(); }, "defend tank: attack helicopters", StepType::ALLOW_MULTITASK);
 
     // TODO: move outside this goal
     pushBackStep(abortCheckFn, hasActionPointFn, [this]() { return resolveFightersHelicoptersConflict(); }, "defend tank: resolve conflicts");
@@ -322,5 +334,15 @@ GoalDefendTank::GoalDefendTank(State& strategyState)
 
 GoalDefendTank::~GoalDefendTank()
 {
+}
+
+bool GoalDefendTank::isCompatibleWith(const Goal* interrupted)
+{
+    auto isDefendHelicopters = [](const GoalManager::GoalHolder& goal) { return typeid(*goal.m_goal) == typeid(DefendHelicopters); };
+
+    const auto& currentGoals = m_goalManager.currentGoals();
+    bool isDefendHelicopterFinished = std::find_if(currentGoals.begin(), currentGoals.end(), isDefendHelicopters) == currentGoals.end();
+
+    return typeid(*interrupted) == typeid(MixTanksAndHealers) && isDefendHelicopterFinished;
 }
 
