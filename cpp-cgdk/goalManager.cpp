@@ -19,6 +19,18 @@ void GoalManager::fillCurrentGoals()
         m_currentGoals.sort();
     }
 
+	if (!m_waitingInsetrion.empty())
+	{
+		// can't reorder goals if there is any goal which can't be paused right now
+		auto isGoalBusy = [](const GoalHolder& holder) { return !holder.m_goal->canPause(); };
+		bool isManagerBusy = std::find_if(m_currentGoals.begin(), m_currentGoals.end(), isGoalBusy) != m_currentGoals.end();
+
+		if (!isManagerBusy)
+		{
+			m_currentGoals.splice(m_currentGoals.end(), m_waitingInsetrion);
+		}
+	}
+
     assert(std::is_sorted(m_currentGoals.begin(), m_currentGoals.end()) && "please keep goals sorted by-priority");
 }
 
