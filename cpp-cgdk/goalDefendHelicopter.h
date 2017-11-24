@@ -17,14 +17,19 @@ namespace goals
         bool abortCheck();
         bool hasActionPoint()               { return state().player()->getRemainingActionCooldownTicks() == 0; }
 
-        const double m_helicopterIteration;  // size of movement emulation increment
+        const double       m_helicopterIteration;  // size of movement emulation increment
+        const GoalManager& m_goalManager;
+        Point              m_ifvCoverPos;
 
         bool doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackWith, const VehicleGroup& attackTarget);
+        
+        Point getActualIfvCoverPos();
 
 		virtual bool isCompatibleWith(const Goal* interrupted) override;
 
+
     public:
-        DefendHelicopters(State& state);
+        DefendHelicopters(State& state, const GoalManager& goalManager);
 
 	};
 }

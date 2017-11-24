@@ -83,6 +83,8 @@ namespace goals
 
         void getGroundUnitOrder(PosByType& actualPositions, PosByType& desiredPositions);
 
+        Point getFinalDestination(model::VehicleType type) const;
+
         ~MixTanksAndHealers();
     };
 

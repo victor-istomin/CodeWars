@@ -45,7 +45,12 @@ MixTanksAndHealers::MixTanksAndHealers(State& worldState)
 
     m_overallMoves = m_pendingMoves = movesByType;
 
-	setupGoalSteps();
+    // TODO !!! there is an issue on seed #1623792313246972 - can't find a path, aborting
+    bool areMovesInitialized = !m_overallMoves[VehicleType::IFV].empty() && !m_overallMoves[VehicleType::TANK].empty() && !m_overallMoves[VehicleType::ARRV].empty();
+
+//    assert(areMovesInitialized);
+    if (areMovesInitialized)
+	    setupGoalSteps();      // abort is better than crash... ):
 }
 
 MixTanksAndHealers::~MixTanksAndHealers()
@@ -470,5 +475,15 @@ void MixTanksAndHealers::setupGoalSteps()
 	auto waitAllStops = makeAnd({ WaitUntilStops(arrvGroup()), WaitUntilStops(ifvGroup()), WaitUntilStops(tankGroup()) });
 
 	pushBackStep(NeverAbort(), waitAllStops, [this]() { return mixGroups(); }, "mix groups", StepType::ALLOW_MULTITASK);
+}
+
+Point MixTanksAndHealers::getFinalDestination(VehicleType type) const
+{
+    static const Destinations s_emptyPlan;
+
+    auto foundIt = m_overallMoves.find(type);
+    const Destinations& plan = foundIt != m_overallMoves.end() ? foundIt->second : s_emptyPlan;
+
+    return plan.empty() ? Point() : plan.back();
 }
 

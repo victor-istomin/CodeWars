@@ -8,6 +8,7 @@
 #include "goalDefendHelicopter.h"
 #include "GoalMixTanksAndHealers.h"
 #include "goalUtils.h"
+#include "goalManager.h"
 
 #include "state.h"
 
@@ -75,14 +76,15 @@ bool DefendHelicopters::abortCheck()
     return state().world()->getTickIndex() > MAX_DEFEND_TICK || isFightersBeaten;
 }
 
-DefendHelicopters::DefendHelicopters(State& state)
+DefendHelicopters::DefendHelicopters(State& state, const GoalManager& goalManager)
     : Goal(state)
     , m_helicopterIteration(std::min(state.constants().m_helicoprerRadius, state.game()->getHelicopterSpeed()) / 2)
+    , m_goalManager(goalManager)
 {
     auto abortCheckFn     = [this]() { return abortCheck(); };
     auto hasActionPointFn = [this]() { return this->state().hasActionPoint(); };
 
-    auto isPathToIfvFree  = [this]() { return helicopterGroup().isPathFree(ifvGroup().m_center, Obstacle(fighterGroup()), m_helicopterIteration); };
+    auto isPathToIfvFree  = [this]() { return helicopterGroup().isPathFree(getActualIfvCoverPos(), Obstacle(fighterGroup()), m_helicopterIteration); };
 
     auto shiftAircraft    = [isPathToIfvFree, abortCheckFn, hasActionPointFn, this]()
     {
@@ -93,7 +95,7 @@ DefendHelicopters::DefendHelicopters(State& state)
         const VehicleGroup& helicopters = helicopterGroup();
 
         const Point helicoptersCenter = helicopters.m_center;
-        const Point ifvCenter         = ifvGroup().m_center;
+        const Point ifvCenter         = getActualIfvCoverPos();
         const Point fighterCenter     = fighters.m_center;
 
         // select and move fighters in order to avoid mid-air collision
@@ -160,7 +162,7 @@ DefendHelicopters::DefendHelicopters(State& state)
 
     auto moveToJoinPoint = [this, hasActionPointFn, abortCheckFn]()
     {
-        const Point joinPoint  = ifvGroup().m_center;
+        const Point joinPoint  = getActualIfvCoverPos();
         const Point selfCenter = helicopterGroup().m_center;
 
 		this->state().setSelectAction(helicopterGroup());
@@ -295,5 +297,24 @@ DefendHelicopters::DefendHelicopters(State& state)
 bool DefendHelicopters::isCompatibleWith(const Goal* interrupted)
 {
 	return typeid(*interrupted) == typeid(MixTanksAndHealers);
+}
+
+Point DefendHelicopters::getActualIfvCoverPos()
+{
+    if (m_ifvCoverPos == Point())
+    {
+        const GoalManager::Goals& currentGoals = m_goalManager.currentGoals();
+
+        auto isMixGoal = [](const GoalManager::GoalHolder& goal) { return typeid(*goal.m_goal) == typeid(MixTanksAndHealers); };
+        auto itMixGoal = std::find_if(currentGoals.begin(), currentGoals.end(), isMixGoal);
+
+        if (itMixGoal != currentGoals.end())
+        {
+            const MixTanksAndHealers* mixGoal = static_cast<const MixTanksAndHealers*>(itMixGoal->m_goal.get());
+            m_ifvCoverPos = mixGoal->getFinalDestination(VehicleType::IFV);
+        }
+    }
+
+    return m_ifvCoverPos != Point() ? m_ifvCoverPos : ifvGroup().m_center;
 }
 
