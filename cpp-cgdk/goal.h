@@ -38,6 +38,8 @@ private:
 
     std::list<StepPtr> m_steps;
     State&             m_state;
+	bool               m_isStarted;
+
 
     void abortGoal() { m_steps.clear(); }
 
@@ -87,11 +89,12 @@ protected:
 
 public:
 
-    Goal(State& state) : m_state(state)  {}
-    virtual ~Goal()                      {}
+    Goal(State& state) : m_state(state), m_isStarted(false) {}
+    virtual ~Goal()                                         {}
 
-    bool inProgress()                    { return !m_steps.empty(); }
-	bool canPause()                      { return m_steps.empty() || m_steps.front()->m_isMultitaskPoint; }
+    bool isFinished()                    { return m_steps.empty(); }
+	bool isStarted()                     { return m_isStarted; }
+	bool canPause()                      { return isFinished() || !isStarted() || m_steps.front()->m_isMultitaskPoint; }
 
     bool isEligibleForBackgroundMode(const Goal* interrupted) 
 	{ 

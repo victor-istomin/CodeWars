@@ -46,7 +46,7 @@ void GoalManager::tick()
 	{
 		m_forcedGoal->performStep(*this, true);
 
-		if (!m_forcedGoal->inProgress())
+		if (m_forcedGoal->isFinished())
 		{
 			auto forcedIt = std::find_if(m_currentGoals.begin(), m_currentGoals.end(), 
 				[this](const GoalHolder& holder) { return holder.m_goal.get() == m_forcedGoal; });
@@ -66,7 +66,7 @@ void GoalManager::tick()
 		{
 			const GoalPtr& mostPriority = m_currentGoals.front().m_goal;
 			mostPriority->performStep(*this, false);
-			if (!mostPriority->inProgress())
+			if (mostPriority->isFinished())
 			{
 				if (m_forcedGoal == m_currentGoals.front().m_goal.get())
 					m_forcedGoal = nullptr;
@@ -102,10 +102,10 @@ void GoalManager::doMultitasking(const Goal* interruptedGoal)
 		}
     }
 
-	if (executedGoal && executedGoal->inProgress() && !executedGoal->canPause())
+	if (executedGoal && !executedGoal->isFinished() && !executedGoal->canPause())
 		m_forcedGoal = executedGoal;
 
     // purge finished goals
-    m_currentGoals.remove_if([](const GoalHolder& holder) { return !holder.m_goal->inProgress(); });
+    m_currentGoals.remove_if([](const GoalHolder& holder) { return holder.m_goal->isFinished(); });
 }
 
