@@ -22,8 +22,13 @@ namespace goals
         Point              m_ifvCoverPos;
 
         bool doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackWith, const VehicleGroup& attackTarget);
+		bool shiftAircraftAway();
+		bool prepareCoverByAircraft();
+
+		bool isPathToIfvFree();
         
         Point getActualIfvCoverPos();
+		Point getAircraftBypassPoint(const VehicleGroup &fighters, const VehicleGroup& helicopters, Point defendDestination);
 
 		virtual bool isCompatibleWith(const Goal* interrupted) override;
 
