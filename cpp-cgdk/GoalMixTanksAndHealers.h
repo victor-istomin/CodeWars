@@ -76,6 +76,7 @@ namespace goals
 
         bool applyMovePlan();
         bool scaleGroups();
+        bool revertScale();
         bool mixGroups();
 
     public:

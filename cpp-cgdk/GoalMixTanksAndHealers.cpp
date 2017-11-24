@@ -475,6 +475,9 @@ void MixTanksAndHealers::setupGoalSteps()
 	auto waitAllStops = makeAnd({ WaitUntilStops(arrvGroup()), WaitUntilStops(ifvGroup()), WaitUntilStops(tankGroup()) });
 
 	pushBackStep(NeverAbort(), waitAllStops, [this]() { return mixGroups(); }, "mix groups", StepType::ALLOW_MULTITASK);
+
+    waitAllStops = makeAnd({ WaitUntilStops(arrvGroup()), WaitUntilStops(ifvGroup()), WaitUntilStops(tankGroup()) });
+    pushBackStep(NeverAbort(), waitAllStops, [this]() { return revertScale(); }, "scale back groups", StepType::ALLOW_MULTITASK);
 }
 
 Point MixTanksAndHealers::getFinalDestination(VehicleType type) const
@@ -485,5 +488,40 @@ Point MixTanksAndHealers::getFinalDestination(VehicleType type) const
     const Destinations& plan = foundIt != m_overallMoves.end() ? foundIt->second : s_emptyPlan;
 
     return plan.empty() ? Point() : plan.back();
+}
+
+bool MixTanksAndHealers::revertScale()
+{
+    auto hasActionPoint = [this]() { return state().hasActionPoint(); };
+
+    auto getScaleFn = [this, hasActionPoint](VehicleType type, double factor)
+    {
+        return [this, type, factor, hasActionPoint]()
+        {
+            const VehicleGroup& group = state().teammates(type);
+            Point center = (group.m_rect.bottomLeft() + group.m_rect.m_bottomRight) / 2;
+
+            state().setSelectAction(group);
+            pushNextStep(NeverAbort(), hasActionPoint, [this, center, factor]() { state().setScaleAction(factor, center); return true; }, "scaling");
+
+            return true;
+        };
+    };
+
+    const size_t typesCount = std::extent<decltype(s_groundUnits)>::value;
+    VehicleType groupsLeftToRight[typesCount] = { VehicleType::_UNKNOWN_ };
+    std::copy(std::cbegin(s_groundUnits), std::cend(s_groundUnits), std::begin(groupsLeftToRight));
+    std::sort(std::begin(groupsLeftToRight), std::end(groupsLeftToRight),
+        [this](VehicleType left, VehicleType right) { return state().teammates(left).m_center.m_x < state().teammates(right).m_center.m_x; });
+
+    // reverse iteration due to LIFO pushing order
+    const double scaleFactor = 1/1.7;   // matrix size of my digital camera in inches. TODO: fix this wtf
+
+    for (auto itType = std::rbegin(groupsLeftToRight); itType != std::rend(groupsLeftToRight); ++itType)
+    {
+        pushNextStep(NeverAbort(), hasActionPoint, getScaleFn(*itType, scaleFactor), "de-scale units group");
+    }
+
+    return true;
 }
 
