@@ -56,8 +56,8 @@ bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, c
     std::stable_partition(std::begin(attackPoints), std::end(attackPoints),
         [this, &attackWith, &obstacle](const Point& p) { return attackWith.isPathFree(p, Obstacle(obstacle), m_helicopterIteration); });
 
-    const Point& destination = attackPoints[0];
-    Vec2d path = destination - attackWith.m_center;
+    const Point& targetPoint = attackPoints[0];
+    Vec2d path = targetPoint - attackWith.m_center;
 
 	state().setSelectAction(attackWith);
 	pushNextStep(shouldAbort, [this] {return hasActionPoint(); }, [this, path]() { state().setMoveAction(path); return true; }, "make attack move");
