@@ -186,9 +186,15 @@ DefendHelicopters::DefendHelicopters(State& state, const GoalManager& goalManage
         Vec2d pathFromHelicopters = Vec2d(allienFighters().m_center - helicopterGroup().m_center).normalize() * fighterGroup().m_rect.height() * 1.8;
         Point defendDestination   = helicopters.m_center + pathFromHelicopters.toPoint<Point>();
 
+		bool isMovePossible = false;
+
         if (fighters.isPathFree(defendDestination, Obstacle(helicopters), m_helicopterIteration))
         {
-            this->state().setMoveAction(defendDestination - fighters.m_center);
+			isMovePossible = true;
+
+			Vec2d movement = defendDestination - fighters.m_center;
+			pushNextStep(abortCheckFn, hasActionPointFn, 
+			             [this, movement]() { this->state().setMoveAction(movement); return true; }, "fighter: defend helicopters straight move");
         }
         else
         {
@@ -225,23 +231,34 @@ DefendHelicopters::DefendHelicopters(State& state, const GoalManager& goalManage
 
             if (solutionIt != std::end(solutions))
             {
+				isMovePossible = true;
                 Point tmpPoint = *solutionIt;
 
-                Vec2d path = tmpPoint - fighters.m_center;
-                this->state().setMoveAction(path);
-
                 Vec2d finalPath = defendDestination - tmpPoint;
-                auto ready = [this, hasActionPointFn, defendDestination, tmpPoint]() 
+                auto isPathBecameFree = [this, hasActionPointFn, defendDestination, tmpPoint]() 
                 { 
                     return hasActionPointFn() 
                         && fighterGroup().m_center.getDistanceTo(tmpPoint) < 1
                         && fighterGroup().isPathFree(defendDestination, Obstacle(helicopterGroup()), m_helicopterIteration);
                 };
 
-				// TODO: allow multitask here!
-                this->pushNextStep(abortCheckFn, ready, [this, finalPath]() { this->state().setMoveAction(finalPath); return true; }, "fighter: defend helicopters");
-            }
+				// push 2 steps in LIFO order: first stage move and then finalMove
+
+				// TODO: allow multitasking on wait here?
+				pushNextStep(abortCheckFn, isPathBecameFree, 
+				             [this, finalPath]() { this->state().setMoveAction(finalPath); return true; }, "fighter: defend helicopters 2nd stage");
+
+				Vec2d firstStagePath = tmpPoint - fighters.m_center;
+				pushNextStep(abortCheckFn, hasActionPointFn,
+				             [this, firstStagePath]() { this->state().setMoveAction(firstStagePath); return true; }, "fighter: defend helicopters 1st stage");
+
+			}
         }
+
+		if (isMovePossible)
+		{
+			this->state().setSelectAction(fighters);
+		}
 
         return true;
     };
@@ -250,7 +267,6 @@ DefendHelicopters::DefendHelicopters(State& state, const GoalManager& goalManage
 
 	pushBackStep(abortCheckFn, WaitUntilStops(helicopterGroup()), DoNothing(), "finish helicopters move", StepType::ALLOW_MULTITASK);
 
-    pushBackStep(abortCheckFn, hasActionPointFn, selectFighters,  "select fighters");
     pushBackStep(abortCheckFn, hasActionPointFn, prepareAircraft, "fighter: prepare defend pos");
 
 	const auto& fighters = fighterGroup();
