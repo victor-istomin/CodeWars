@@ -7,6 +7,7 @@
 #include <iterator>
 #include <utility>
 #include <memory>
+#include <type_traits>
 
 #include "model/World.h"
 #include "model/Player.h"
@@ -16,6 +17,7 @@
 
 #include "geometry.h"
 #include "VehicleGroup.h"
+
 
 
 
@@ -59,8 +61,8 @@ private:
         typedef std::map<model::WeatherType, double> AirVisibility;
         typedef std::map<model::VehicleType, double> UnitVisionRadius;
 
-        typedef decltype(static_cast<model::World*>(nullptr)->getTerrainByCellXY()) TerrainCells;
-        typedef decltype(static_cast<model::World*>(nullptr)->getWeatherByCellXY()) WeatherCells;
+        typedef std::remove_reference_t<decltype(static_cast<model::World*>(nullptr)->getTerrainByCellXY())> TerrainCells;
+        typedef std::remove_reference_t<decltype(static_cast<model::World*>(nullptr)->getWeatherByCellXY())> WeatherCells;
 
         double           m_helicoprerRadius;
         GroundVisibility m_groundVisibility;

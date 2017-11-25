@@ -131,11 +131,15 @@ bool Goal::checkNuclearLaunch()
 
             DamageInfo bestDamage{ Point(), 0, teammate };
 
-            double visionRange = teammate->getVisionRange() * 0.6;
+            // TODO - predict terrain where this unit will go next 30 ticks!
+
+            double rangeGap = teammate->getRadius();
+            double visionRange = state().getUnitVisionRange(*teammate) - 2 * teammate->getRadius() - rangeGap; 
             double squaredVR = visionRange * visionRange;
+
             for (const VehiclePtr& hitPoint : alliens)
             {
-                if (teammate->getSquaredDistanceTo(*hitPoint) > squaredVR)         // todo - check terrain type!
+                if (teammate->getSquaredDistanceTo(*hitPoint) > squaredVR)
                     continue;
 
                 double damage = 0;

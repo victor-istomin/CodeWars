@@ -48,8 +48,9 @@ bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, c
         attackRect.bottomLeft() + displacement1, attackRect.topRight() + displacement1,
     };
 
+    const VehicleGroup& coveredGroup = helicopterGroup();
     std::sort(std::begin(attackPoints), std::end(attackPoints), 
-        [&attackWith](const Point& left, const Point& right) { return attackWith.m_center.getSquareDistance(left) < attackWith.m_center.getSquareDistance(right); });
+        [&coveredGroup](const Point& left, const Point& right) { return coveredGroup.m_center.getSquareDistance(left) < coveredGroup.m_center.getSquareDistance(right); });
 
     const VehicleGroup& obstacle = helicopterGroup();
 
@@ -143,6 +144,8 @@ DefendHelicopters::DefendHelicopters(State& state, GoalManager& goalManager)
     };
 
 	pushBackStep(abortCheckFn, shouldStartAttack, doAttackFighters, "fighter: start attacking enemy fighters");
+
+    // TODO: add next goal - terrorize enemy with nukes aimed by aircraft
 }
 
 bool DefendHelicopters::isCompatibleWith(const Goal* interrupted)
