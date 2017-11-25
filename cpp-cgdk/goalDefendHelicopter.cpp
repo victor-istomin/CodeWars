@@ -323,29 +323,80 @@ Point DefendHelicopters::getAircraftBypassPoint(const VehicleGroup& fighters, co
 	return solutionIt != std::end(solutions) ? *solutionIt : Point();
 }
 
-Point DefendHelicopters::getFightersTargetPoint(const VehicleGroup& attackTarget, const VehicleGroup& attackWith)
+Point DefendHelicopters::getFightersTargetPoint(const VehicleGroup& mainTarget, const VehicleGroup& attackWith)
 {
-    const Rect& attackRect = attackTarget.m_rect;
+    std::vector<Point> attackPoints;
+    attackPoints.reserve(mainTarget.m_units.size());
 
-    static const double sqrt2 = std::sqrt(2);
-    VehiclePtr firstUnit = attackWith.m_units.front().lock();
-
-    double aerialAttackRange = firstUnit->getAerialAttackRange();
-    double radius = firstUnit->getRadius();
-
-    const Point& displacement1 = Point(aerialAttackRange - radius, aerialAttackRange - radius) / sqrt2 / 1.5;
-    const Point& displacement2 = Point(-(aerialAttackRange - radius), aerialAttackRange - radius) / sqrt2 / 1.5;
-    const Point& displacement3 = Point(aerialAttackRange - radius, -(aerialAttackRange - radius)) / sqrt2 / 1.5;
-    const Point& displacement4 = Point(-(aerialAttackRange - radius), -(aerialAttackRange - radius)) / sqrt2 / 1.5;
-
-    Point attackPoints[] =
+    VehiclePtr myFirstUnit = attackWith.m_units.front().lock();
+    
+    VehicleGroup mergedGroup;
+    const double maxDangerousHealth = attackWith.m_healthSum / 2;
+    if (state().isEnemyCoveredByAnother(mainTarget.m_units.front().lock()->getType(), mergedGroup)
+        && mergedGroup.m_healthSum > maxDangerousHealth)
     {
-        attackTarget.m_center,
+        // enemy is mixed with another group, be careful
 
-        attackRect.m_topLeft, attackRect.m_bottomRight, attackRect.bottomLeft(), attackRect.topRight(),
-        attackRect.m_topLeft + displacement1, attackRect.m_bottomRight + displacement1, attackTarget.m_center + displacement1,
-        attackRect.bottomLeft() + displacement1, attackRect.topRight() + displacement1,
-    };
+        // TODO - add some better anchor like my spawn position, closest unit, etc. 
+        const Point& anchor = mergedGroup.m_center;
+        
+        std::vector<Point> enemyFringe;
+        enemyFringe.reserve(mergedGroup.m_units.size());
+
+        std::transform(mergedGroup.m_units.begin(), mergedGroup.m_units.end(), std::back_inserter(enemyFringe), 
+            [](const VehicleCache& cache) { return *cache.lock(); });
+
+        std::sort(enemyFringe.begin(), enemyFringe.end(), 
+            [&anchor](const Point& left, const Point& right) { return anchor.getSquareDistance(left) < anchor.getSquareDistance(right); });
+
+        double attackersGroupRadius = 1;
+        for (const VehicleCache& cache : attackWith.m_units)
+            attackersGroupRadius = std::max(attackersGroupRadius, attackWith.m_center.getDistanceTo(*cache.lock()));
+
+        double agressionGap = myFirstUnit->getRadius();
+
+        Vec2d targetDirection = enemyFringe.front() - attackWith.m_center;
+        double actualDistance = targetDirection.length() - attackersGroupRadius;
+        double desiredDistance = state().game()->getFighterAerialAttackRange() + attackersGroupRadius - 2 * myFirstUnit->getRadius() - agressionGap;
+
+        if (actualDistance >= desiredDistance)
+        {
+            // move to target
+            targetDirection.truncate(desiredDistance);
+        }
+        else
+        {
+            double rollbackDistance = desiredDistance - actualDistance;
+            targetDirection *= -1;
+            targetDirection.truncate(rollbackDistance);
+        }
+
+        attackPoints.push_back(attackWith.m_center + targetDirection);
+    }
+    else
+    {
+        const VehicleGroup&  attackTarget = mainTarget;
+        const Rect& attackRect = attackTarget.m_rect;
+
+        static const double sqrt2 = std::sqrt(2);
+
+        double aerialAttackRange = myFirstUnit->getAerialAttackRange();
+        double radius = myFirstUnit->getRadius();
+
+        const Point& displacement1 = Point(aerialAttackRange - radius, aerialAttackRange - radius) / sqrt2 / 1.5;
+        const Point& displacement2 = Point(-(aerialAttackRange - radius), aerialAttackRange - radius) / sqrt2 / 1.5;
+        const Point& displacement3 = Point(aerialAttackRange - radius, -(aerialAttackRange - radius)) / sqrt2 / 1.5;
+        const Point& displacement4 = Point(-(aerialAttackRange - radius), -(aerialAttackRange - radius)) / sqrt2 / 1.5;
+
+        attackPoints =
+        {
+            attackTarget.m_center,
+
+            attackRect.m_topLeft, attackRect.m_bottomRight, attackRect.bottomLeft(), attackRect.topRight(),
+            attackRect.m_topLeft + displacement1, attackRect.m_bottomRight + displacement1, attackTarget.m_center + displacement1,
+            attackRect.bottomLeft() + displacement1, attackRect.topRight() + displacement1,
+        };
+    }
 
     const VehicleGroup& coveredGroup = helicopterGroup();
     std::sort(std::begin(attackPoints), std::end(attackPoints),

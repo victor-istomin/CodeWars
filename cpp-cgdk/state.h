@@ -118,6 +118,8 @@ public:
 
     double getUnitVisionRange(const model::Vehicle& v) const;
 
+    bool isEnemyCoveredByAnother(model::VehicleType groupId, VehicleGroup& mergedGroups) const;
+
 
     void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move);
     

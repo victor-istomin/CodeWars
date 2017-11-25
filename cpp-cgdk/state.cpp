@@ -211,3 +211,32 @@ double State::getUnitVisionRange(const model::Vehicle& v) const
     double factor = v.isAerial() ? m_constants->getVisionFactor(m_constants->getWeather(tile)) : m_constants->getVisionFactor(m_constants->getTerrain(tile));
     return initial * factor;
 }
+
+// check is this enemy group intersects with another enemy group in order to detect massive rush
+bool State::isEnemyCoveredByAnother(model::VehicleType groupId, VehicleGroup& mergedGroups) const
+{
+    mergedGroups = alliens(groupId);
+
+    std::vector<const VehicleGroup*> others;
+    others.reserve(m_alliens.size());
+
+    for (const auto& idGroupPair : m_alliens)
+        if (idGroupPair.first != groupId)
+            others.push_back(&idGroupPair.second);
+
+    bool isCovered = false;
+    for (const VehicleGroup* other : others)
+    {
+        if (mergedGroups.m_rect.overlaps(other->m_rect))
+        {
+            // merge
+            isCovered = true;
+            std::copy(other->m_units.begin(), other->m_units.end(), std::inserter(mergedGroups.m_units, mergedGroups.m_units.end()));
+        }
+    }
+
+    if (isCovered)
+        mergedGroups.update();
+
+    return isCovered;
+}
