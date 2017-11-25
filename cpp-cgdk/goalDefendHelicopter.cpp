@@ -338,7 +338,7 @@ Point DefendHelicopters::getFightersTargetPoint(const VehicleGroup& mainTarget, 
         // enemy is mixed with another group, be careful
 
         // TODO - add some better anchor like my spawn position, closest unit, etc. 
-        const Point& anchor = mergedGroup.m_center;
+        const Point& anchor = attackWith.m_center;
         
         std::vector<Point> enemyFringe;
         enemyFringe.reserve(mergedGroup.m_units.size());
@@ -353,11 +353,11 @@ Point DefendHelicopters::getFightersTargetPoint(const VehicleGroup& mainTarget, 
         for (const VehicleCache& cache : attackWith.m_units)
             attackersGroupRadius = std::max(attackersGroupRadius, attackWith.m_center.getDistanceTo(*cache.lock()));
 
-        double agressionGap = myFirstUnit->getRadius();
+        double agressionGap = 4 * myFirstUnit->getRadius();
 
         Vec2d targetDirection = enemyFringe.front() - attackWith.m_center;
         double actualDistance = targetDirection.length() - attackersGroupRadius;
-        double desiredDistance = state().game()->getFighterAerialAttackRange() + attackersGroupRadius - 2 * myFirstUnit->getRadius() - agressionGap;
+        double desiredDistance = state().game()->getFighterAerialAttackRange() - 2 * myFirstUnit->getRadius() - agressionGap;
 
         if (actualDistance >= desiredDistance)
         {
