@@ -43,7 +43,8 @@ MixTanksAndHealers::MixTanksAndHealers(State& worldState, GoalManager& goalManag
     for (VehicleType type : s_groundUnits)
         movesByType[type] = getMoves(type, state().teammates(type).m_center, actualPositions[type], desiredPositions[type], true);
 
-    m_overallMoves = m_pendingMoves = movesByType;
+    m_pendingMoves.swap(movesByType);
+    m_overallMoves = m_pendingMoves;
 
     // TODO !!! there is an issue on seed #1623792313246972 - can't find a path, aborting
     bool areMovesInitialized = !m_overallMoves[VehicleType::IFV].empty() && !m_overallMoves[VehicleType::TANK].empty() && !m_overallMoves[VehicleType::ARRV].empty();

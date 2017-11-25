@@ -13,8 +13,28 @@ void State::update(const model::World& world, const model::Player& me, const mod
 		auto itHelicopter = std::find_if(m_world->getNewVehicles().begin(), m_world->getNewVehicles().end(),
 			                             [](const model::Vehicle& v) { return v.getType() == model::VehicleType::HELICOPTER; });
 
+        const int tileSize = static_cast<int>(game.getWorldWidth()) / world.getWeatherByCellXY().size();
+
 		double helicopterRadius = itHelicopter != m_world->getNewVehicles().end() ? itHelicopter->getRadius() : 2;
-		m_constants = std::make_unique<Constants>(helicopterRadius);
+		m_constants = std::make_unique<Constants>(helicopterRadius, Constants::PointInt(tileSize, tileSize),
+            Constants::GroundVisibility {
+                { model::TerrainType::FOREST, game.getForestTerrainVisionFactor() },
+                { model::TerrainType::PLAIN,  game.getPlainTerrainVisionFactor() },
+                { model::TerrainType::SWAMP,  game.getSwampTerrainVisionFactor() }
+            },
+            Constants::AirVisibility {
+                { model::WeatherType::CLEAR, game.getClearWeatherVisionFactor() },
+                { model::WeatherType::CLOUD, game.getCloudWeatherVisionFactor() },
+                { model::WeatherType::RAIN,  game.getRainWeatherVisionFactor() }
+            },
+            Constants::UnitVisionRadius {
+                { model::VehicleType::ARRV,       game.getArrvVisionRange()},
+                { model::VehicleType::FIGHTER,    game.getFighterVisionRange()},
+                { model::VehicleType::HELICOPTER, game.getHelicopterVisionRange()},
+                { model::VehicleType::IFV,        game.getIfvVisionRange()},
+                { model::VehicleType::TANK,       game.getTankVisionRange()}
+            },
+            world.getTerrainByCellXY(), world.getWeatherByCellXY());
 	}
 
 	m_isMoveCommitted = false;
@@ -67,7 +87,6 @@ void State::update(const model::World& world, const model::Player& me, const mod
 		if (guideUnit)
 			m_nuclearGuide = &teammates(guideUnit->getType());
 	}
-
 }
 
 void State::setSelectAction(const Rect& rect, model::VehicleType vehicleType /*= model::VehicleType::_UNKNOWN_*/)
@@ -149,4 +168,46 @@ void State::setScaleAction(double factor, const Point& center)
 	m_move->setFactor(factor);
 
 	m_isMoveCommitted = true;
+}
+
+State::Constants::PointInt State::Constants::getTileIndex(const model::Vehicle& v) const
+{
+    return PointInt(static_cast<int>(v.getX()) / m_tileSize.m_x, static_cast<int>(v.getY()) / m_tileSize.m_y);
+}
+
+model::WeatherType State::Constants::getWeather(const PointInt& tile) const
+{
+    return m_weather[tile.m_x][tile.m_y];
+}
+
+model::TerrainType State::Constants::getTerrain(const PointInt& tile) const
+{
+    return m_terrain[tile.m_x][tile.m_y];
+}
+
+double State::Constants::getMaxVisionRange(model::VehicleType type) const
+{
+    return m_unitVision.find(type)->second;
+}
+
+double State::Constants::getVisionFactor(model::WeatherType weather) const
+{
+    auto found = m_airVisibility.find(weather);
+    assert(found != m_airVisibility.end());
+    return found != m_airVisibility.end() ? found->second : 1.0;
+}
+
+double State::Constants::getVisionFactor(model::TerrainType terrain) const
+{
+    auto found = m_groundVisibility.find(terrain);
+    assert(found != m_groundVisibility.end());
+    return found != m_groundVisibility.end() ? found->second : 1.0;
+}
+
+double State::getUnitVisionRange(const model::Vehicle& v) const
+{
+    Constants::PointInt tile = m_constants->getTileIndex(v);
+    double initial = m_constants->getMaxVisionRange(v.getType());
+    double factor = v.isAerial() ? m_constants->getVisionFactor(m_constants->getWeather(tile)) : m_constants->getVisionFactor(m_constants->getTerrain(tile));
+    return initial * factor;
 }

@@ -47,14 +47,51 @@ private:
 
     struct Constants
     {
-        double m_helicoprerRadius;
+        struct PointInt
+        { 
+            int m_x; 
+            int m_y; 
 
-        Constants(double helicopterRadius) : m_helicoprerRadius(helicopterRadius) {}
+            PointInt(int x, int y) : m_x(x), m_y(y) {}
+        };
+
+        typedef std::map<model::TerrainType, double> GroundVisibility;
+        typedef std::map<model::WeatherType, double> AirVisibility;
+        typedef std::map<model::VehicleType, double> UnitVisionRadius;
+
+        typedef decltype(static_cast<model::World*>(nullptr)->getTerrainByCellXY()) TerrainCells;
+        typedef decltype(static_cast<model::World*>(nullptr)->getWeatherByCellXY()) WeatherCells;
+
+        double           m_helicoprerRadius;
+        GroundVisibility m_groundVisibility;
+        AirVisibility    m_airVisibility;
+        UnitVisionRadius m_unitVision;
+        TerrainCells     m_terrain;
+        WeatherCells     m_weather;
+        const PointInt   m_tileSize;
+
+        PointInt getTileIndex(const model::Vehicle& v) const;
+        model::WeatherType getWeather(const PointInt& tile) const;
+        model::TerrainType getTerrain(const PointInt& tile) const;
+
+        double getMaxVisionRange(model::VehicleType type) const;
+        double getVisionFactor(model::WeatherType weather) const;
+        double getVisionFactor(model::TerrainType terrain) const;
+
+        Constants(double helicopterRadius, const PointInt& tileSize, 
+                  GroundVisibility&& groundVisibility, AirVisibility&& airVisibility, UnitVisionRadius&& unitVision,
+                  const TerrainCells& terrain, const WeatherCells& weather)
+            : m_helicoprerRadius(helicopterRadius), m_tileSize(tileSize)
+            , m_groundVisibility(groundVisibility), m_airVisibility(airVisibility)
+            , m_unitVision(unitVision), m_terrain(terrain), m_weather(weather)
+        {}
     };
 
 public:
 
-    State() : m_isMoveCommitted(false), m_nuclearGuide(nullptr) {}
+    State() : m_world(nullptr), m_game(nullptr), m_move(nullptr), m_player(nullptr)
+            , m_isMoveCommitted(false), m_nuclearGuide(nullptr) 
+    {}
 
     Constants& constants() { return *m_constants; }
 
@@ -76,6 +113,8 @@ public:
     bool hasActionPoint() const                                  { return player()->getRemainingActionCooldownTicks() == 0; }
     bool isCorrectPosition(const Point& p) const                 { return p.m_x >= 0 && p.m_y >= 0 && p.m_x <= m_game->getWorldWidth() && p.m_y <= m_game->getWorldHeight();}
     bool isCorrectPosition(const Rect& r) const                  { return isCorrectPosition(r.m_topLeft) && isCorrectPosition(r.m_bottomRight); }
+
+    double getUnitVisionRange(const model::Vehicle& v) const;
 
 
     void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move);
