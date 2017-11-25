@@ -56,6 +56,18 @@ void State::update(const model::World& world, const model::Player& me, const mod
 
 	std::sort(selection.begin(), selection.end());
 	m_selection = std::move(selection);
+
+	m_nuclearGuide = nullptr;
+	if (me.getNextNuclearStrikeTickIndex() != -1)
+	{
+		Id guideId = me.getNextNuclearStrikeVehicleId();
+
+		VehiclePtr guideUnit = m_vehicles[guideId];
+
+		if (guideUnit)
+			m_nuclearGuide = &teammates(guideUnit->getType());
+	}
+
 }
 
 void State::setSelectAction(const Rect& rect, model::VehicleType vehicleType /*= model::VehicleType::_UNKNOWN_*/)

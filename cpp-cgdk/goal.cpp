@@ -6,7 +6,7 @@ void Goal::performStep(GoalManager& goalManager, bool isBackgroundMode)
     if (checkNuclearLaunch())
         return;
 
-    if (!inProgress())
+    if (isFinished())
         return;
 
     const Step* currentStep = m_steps.front().get();
@@ -20,6 +20,7 @@ void Goal::performStep(GoalManager& goalManager, bool isBackgroundMode)
     {
         if (currentStep->m_proceed())
         {
+			m_isStarted = true;
             currentStep = nullptr;
             m_steps.pop_front();
 

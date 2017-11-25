@@ -18,7 +18,6 @@ namespace goals
         bool hasActionPoint()               { return state().player()->getRemainingActionCooldownTicks() == 0; }
 
         const double       m_helicopterIteration;  // size of movement emulation increment
-        const GoalManager& m_goalManager;
         Point              m_ifvCoverPos;
 
         bool doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackWith, const VehicleGroup& attackTarget);
@@ -34,7 +33,7 @@ namespace goals
 
 
     public:
-        DefendHelicopters(State& state, const GoalManager& goalManager);
+        DefendHelicopters(State& state, GoalManager& goalManager);
 
 	};
 }

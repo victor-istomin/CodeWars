@@ -76,10 +76,9 @@ bool DefendHelicopters::abortCheck()
     return state().world()->getTickIndex() > MAX_DEFEND_TICK || isFightersBeaten;
 }
 
-DefendHelicopters::DefendHelicopters(State& state, const GoalManager& goalManager)
-    : Goal(state)
+DefendHelicopters::DefendHelicopters(State& state, GoalManager& goalManager)
+    : Goal(state, goalManager)
     , m_helicopterIteration(std::min(state.constants().m_helicoprerRadius, state.game()->getHelicopterSpeed()) / 2)
-    , m_goalManager(goalManager)
 {
     auto abortCheckFn     = [this]() { return abortCheck(); };
     auto hasActionPointFn = [this]() { return this->state().hasActionPoint(); };
@@ -155,7 +154,7 @@ Point DefendHelicopters::getActualIfvCoverPos()
 {
     if (m_ifvCoverPos == Point())
     {
-        const GoalManager::Goals& currentGoals = m_goalManager.currentGoals();
+        const GoalManager::Goals& currentGoals = goalManager().currentGoals();
 
         auto isMixGoal = [](const GoalManager::GoalHolder& goal) { return typeid(*goal.m_goal) == typeid(MixTanksAndHealers); };
         auto itMixGoal = std::find_if(currentGoals.begin(), currentGoals.end(), isMixGoal);

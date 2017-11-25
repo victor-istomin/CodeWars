@@ -37,7 +37,10 @@ private:
     };
 
     std::list<StepPtr> m_steps;
+    GoalManager&       m_goalManager;
     State&             m_state;
+	bool               m_isStarted;
+
 
     void abortGoal() { m_steps.clear(); }
 
@@ -67,6 +70,8 @@ protected:
 
     State& state()                                { return m_state; }
     const State& state() const                    { return m_state; }
+    GoalManager& goalManager()                    { return m_goalManager; }
+    const GoalManager& goalManager() const        { return m_goalManager; }
 
     const VehicleGroup& ifvGroup()          const { return m_state.teammates(model::VehicleType::IFV); }
     const VehicleGroup& tankGroup()         const { return m_state.teammates(model::VehicleType::TANK); }
@@ -87,11 +92,12 @@ protected:
 
 public:
 
-    Goal(State& state) : m_state(state)  {}
-    virtual ~Goal()                      {}
+    Goal(State& state, GoalManager& goalManager) : m_goalManager(goalManager), m_state(state), m_isStarted(false) {}
+    virtual ~Goal()                                         {}
 
-    bool inProgress()                    { return !m_steps.empty(); }
-	bool canPause()                      { return m_steps.empty() || m_steps.front()->m_isMultitaskPoint; }
+    bool isFinished()                    { return m_steps.empty(); }
+	bool isStarted()                     { return m_isStarted; }
+	bool canPause()                      { return isFinished() || !isStarted() || m_steps.front()->m_isMultitaskPoint; }
 
     bool isEligibleForBackgroundMode(const Goal* interrupted) 
 	{ 

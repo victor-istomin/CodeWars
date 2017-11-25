@@ -98,8 +98,8 @@ bool GoalDefendIfv::moveHelicopters()
     return true;
 }
 
-GoalDefendIfv::GoalDefendIfv(State& strategyState)
-    : Goal(strategyState)
+GoalDefendIfv::GoalDefendIfv(State& strategyState, GoalManager& goalManager)
+    : Goal(strategyState, goalManager)
     , m_helicopterIteration(std::min(strategyState.constants().m_helicoprerRadius, strategyState.game()->getHelicopterSpeed()) / 2)
 {
     
@@ -107,14 +107,11 @@ GoalDefendIfv::GoalDefendIfv(State& strategyState)
     Callback hasActionPointFn = [this]() { return state().hasActionPoint(); };
     Callback canMoveHelicopters = [this]()
     {
-//        int conflictTicksLeft = m_lastConflictTick == 0 ? -1 : std::max(0, state().world()->getTickIndex() - m_lastConflictTick - MAX_RESOLVE_CONFLICT_TICKS);
-
         bool isPathFree = helicopterGroup().isPathFree(tankGroup().m_center, Obstacle(fighterGroup()), m_helicopterIteration);
 
-        return state().hasActionPoint() && (isPathFree /*|| conflictTicksLeft == 0*/);
+        return state().hasActionPoint() && isPathFree;
     };
 
-    //pushBackStep(abortCheckFn, hasActionPointFn, [this]() { return resolveFightersHelicoptersConflict(); }, "defend tank: ensure no conflicts");
     pushBackStep(abortCheckFn, hasActionPointFn, [this]() { return shiftAircraft(); }, "defend ifv: shift aircraft");
     pushBackStep(abortCheckFn, canMoveHelicopters, [this]() { return moveHelicopters(); }, "defend ifv: move helicopters");
     

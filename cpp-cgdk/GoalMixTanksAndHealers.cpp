@@ -22,8 +22,8 @@ namespace
     };
 }
 
-MixTanksAndHealers::MixTanksAndHealers(State& worldState)
-    : Goal(worldState)
+MixTanksAndHealers::MixTanksAndHealers(State& worldState, GoalManager& goalManager)
+    : Goal(worldState, goalManager)
     , m_iterationSize( std::min( {worldState.game()->getArrvSpeed(), worldState.game()->getTankSpeed(), worldState.game()->getIfvSpeed()} ) / 2.0 )
 {
 	initGridPositions();

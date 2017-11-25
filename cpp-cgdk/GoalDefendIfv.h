@@ -21,7 +21,7 @@ namespace goals
 
 
     public:
-        GoalDefendIfv(State& worldState);
+        GoalDefendIfv(State& worldState, GoalManager& goalManager);
         ~GoalDefendIfv();
     };
 }

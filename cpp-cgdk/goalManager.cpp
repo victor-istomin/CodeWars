@@ -11,13 +11,27 @@ void GoalManager::fillCurrentGoals()
 
     if (m_state.world()->getTickIndex() == 0)
     {
-        m_currentGoals.emplace_back(0, std::make_unique<goals::MixTanksAndHealers>(m_state));
+        m_currentGoals.emplace_back(0, std::make_unique<goals::MixTanksAndHealers>(m_state, *this));
         m_currentGoals.emplace_back(1, std::make_unique<goals::DefendHelicopters>(m_state, *this));
         m_currentGoals.emplace_back(2, std::make_unique<goals::GoalDefendTank>(m_state, *this));
-        m_currentGoals.emplace_back(3, std::make_unique<goals::GoalDefendIfv>(m_state));
+        m_currentGoals.emplace_back(3, std::make_unique<goals::GoalDefendIfv>(m_state, *this));
 
         m_currentGoals.sort();
     }
+
+	if (!m_waitingInsetrion.empty())
+	{
+		// can't reorder goals if there is any goal which can't be paused right now
+		auto isGoalBusy = [](const GoalHolder& holder) { return !holder.m_goal->canPause(); };
+		bool isManagerBusy = std::find_if(m_currentGoals.begin(), m_currentGoals.end(), isGoalBusy) != m_currentGoals.end();
+
+		if (!isManagerBusy)
+		{
+			m_currentGoals.splice(m_currentGoals.end(), m_waitingInsetrion);
+		}
+
+		m_currentGoals.sort();
+	}
 
     assert(std::is_sorted(m_currentGoals.begin(), m_currentGoals.end()) && "please keep goals sorted by-priority");
 }
@@ -31,8 +45,8 @@ GoalManager::GoalManager(State& state)
 
 struct NukeGoal : public Goal
 {
-    NukeGoal(State& s)
-        : Goal(s)
+    NukeGoal(State& s, GoalManager& goalManager)
+        : Goal(s, goalManager)
     {
         pushNextStep([]() {return false; }, []() {return true; }, []() {return true; }, "ensure nuke may be launched");
     }
@@ -46,7 +60,7 @@ void GoalManager::tick()
 	{
 		m_forcedGoal->performStep(*this, true);
 
-		if (!m_forcedGoal->inProgress())
+		if (m_forcedGoal->isFinished())
 		{
 			auto forcedIt = std::find_if(m_currentGoals.begin(), m_currentGoals.end(), 
 				[this](const GoalHolder& holder) { return holder.m_goal.get() == m_forcedGoal; });
@@ -66,7 +80,7 @@ void GoalManager::tick()
 		{
 			const GoalPtr& mostPriority = m_currentGoals.front().m_goal;
 			mostPriority->performStep(*this, false);
-			if (!mostPriority->inProgress())
+			if (mostPriority->isFinished())
 			{
 				if (m_forcedGoal == m_currentGoals.front().m_goal.get())
 					m_forcedGoal = nullptr;
@@ -76,7 +90,7 @@ void GoalManager::tick()
 		}
 		else
 		{
-			NukeGoal dummy(m_state);
+			NukeGoal dummy(m_state, *this);
 			dummy.performStep(*this, false);
 		}
 	}
@@ -102,10 +116,10 @@ void GoalManager::doMultitasking(const Goal* interruptedGoal)
 		}
     }
 
-	if (executedGoal && executedGoal->inProgress() && !executedGoal->canPause())
+	if (executedGoal && !executedGoal->isFinished() && !executedGoal->canPause())
 		m_forcedGoal = executedGoal;
 
     // purge finished goals
-    m_currentGoals.remove_if([](const GoalHolder& holder) { return !holder.m_goal->inProgress(); });
+    m_currentGoals.remove_if([](const GoalHolder& holder) { return holder.m_goal->isFinished(); });
 }
 

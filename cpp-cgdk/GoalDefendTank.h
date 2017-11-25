@@ -18,8 +18,6 @@ namespace goals
         int          m_lastConflictTick = 0;
         int          m_lastAttackTick   = 0;
 
-        const GoalManager& m_goalManager;
-
         bool abortCheck() const;
         bool isHelicoptersBeaten() const;
         
@@ -33,7 +31,7 @@ namespace goals
         virtual bool isCompatibleWith(const Goal* interrupted) override;
 
     public:
-        GoalDefendTank(State& state, const GoalManager& goalManager);
+        GoalDefendTank(State& state, GoalManager& goalManager);
         ~GoalDefendTank();
     };
 }

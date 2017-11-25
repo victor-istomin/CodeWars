@@ -299,11 +299,10 @@ bool GoalDefendTank::loopFithersAttack()
 }
 
 
-GoalDefendTank::GoalDefendTank(State& strategyState, const GoalManager& goalManager)
-    : Goal(strategyState)
+GoalDefendTank::GoalDefendTank(State& strategyState, GoalManager& goalManager)
+    : Goal(strategyState, goalManager)
     , m_helicopterIteration(std::min(strategyState.constants().m_helicoprerRadius, strategyState.game()->getHelicopterSpeed()) / 2)
     , m_maxAgressiveDistance(strategyState.world()->getWidth() / 4)   // slightly less than half of path from center to me
-    , m_goalManager(goalManager)
 {
     Callback abortCheckFn       = [this]() { return abortCheck(); };
     Callback hasActionPointFn   = [this]() { return state().hasActionPoint(); };
@@ -340,7 +339,7 @@ bool GoalDefendTank::isCompatibleWith(const Goal* interrupted)
 {
     auto isDefendHelicopters = [](const GoalManager::GoalHolder& goal) { return typeid(*goal.m_goal) == typeid(DefendHelicopters); };
 
-    const auto& currentGoals = m_goalManager.currentGoals();
+    const auto& currentGoals = goalManager().currentGoals();
     bool isDefendHelicopterFinished = std::find_if(currentGoals.begin(), currentGoals.end(), isDefendHelicopters) == currentGoals.end();
 
     return typeid(*interrupted) == typeid(MixTanksAndHealers) && isDefendHelicopterFinished;

@@ -80,7 +80,7 @@ namespace goals
         bool mixGroups();
 
     public:
-        explicit MixTanksAndHealers(State& state);
+        MixTanksAndHealers(State& state, GoalManager& goalManager);
 
         void getGroundUnitOrder(PosByType& actualPositions, PosByType& desiredPositions);
 
