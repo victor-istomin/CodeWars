@@ -6,7 +6,7 @@ namespace goals
 {
     class GoalDefendTank : public Goal
     {
-        static const int MAX_DEFEND_TICK            = 10000;
+        static const int MAX_DEFEND_TICK            = 14000;
         static const int MAX_RESOLVE_CONFLICT_TICKS = 30;
         static const int MAX_HEAL_TICKS             = 1000;
 

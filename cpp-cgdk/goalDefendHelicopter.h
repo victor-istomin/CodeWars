@@ -9,7 +9,7 @@ namespace goals
 {
     class DefendHelicopters : public Goal
     {
-        const int    MAX_DEFEND_TICK   = 4000;
+        const int    MAX_DEFEND_TICK   = 8000;
         const double MIN_HEALTH_FACTOR = 0.03;
 
         struct DoNothing { bool operator()() { return true; } };
