@@ -21,53 +21,24 @@ using namespace goals;
 using namespace model;
 
 
-bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackWith, const VehicleGroup& attackTarget)
+bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackTarget)
 {
+    const VehicleGroup& attackWith = fighterGroup();
     if (attackWith.m_units.empty() || attackTarget.m_units.empty())
         return true;   // do nothing if not possible to attach (don't block entire goal)
 
-    const Rect& attackRect = attackTarget.m_rect;
-
-    static const double sqrt2 = std::sqrt(2);
-    VehiclePtr firstUnit = attackWith.m_units.front().lock();
-
-    double aerialAttackRange = firstUnit->getAerialAttackRange();
-    double radius = firstUnit->getRadius();
-
-    const Point& displacement1 = Point(  aerialAttackRange - radius,  aerialAttackRange - radius) / sqrt2 / 1.5;
-    const Point& displacement2 = Point(-(aerialAttackRange - radius), aerialAttackRange - radius) / sqrt2 / 1.5;
-    const Point& displacement3 = Point(  aerialAttackRange - radius,  -(aerialAttackRange - radius)) / sqrt2 / 1.5;
-    const Point& displacement4 = Point(-(aerialAttackRange - radius), -(aerialAttackRange - radius)) / sqrt2 / 1.5;
-
-    Point attackPoints[] = 
-    { 
-        attackTarget.m_center, 
-
-        attackRect.m_topLeft, attackRect.m_bottomRight, attackRect.bottomLeft(), attackRect.topRight(),
-        attackRect.m_topLeft + displacement1, attackRect.m_bottomRight + displacement1, attackTarget.m_center + displacement1,
-        attackRect.bottomLeft() + displacement1, attackRect.topRight() + displacement1,
-    };
-
-    const VehicleGroup& coveredGroup = helicopterGroup();
-    std::sort(std::begin(attackPoints), std::end(attackPoints), 
-        [&coveredGroup](const Point& left, const Point& right) { return coveredGroup.m_center.getSquareDistance(left) < coveredGroup.m_center.getSquareDistance(right); });
-
-    const VehicleGroup& obstacle = helicopterGroup();
-
-    std::stable_partition(std::begin(attackPoints), std::end(attackPoints),
-        [this, &attackWith, &obstacle](const Point& p) { return attackWith.isPathFree(p, Obstacle(obstacle), m_helicopterIteration); });
-
-    const Point& targetPoint = attackPoints[0];
+    const Point targetPoint = getFightersTargetPoint(attackTarget, attackWith);
     Vec2d path = targetPoint - attackWith.m_center;
 
 	state().setSelectAction(attackWith);
 	pushNextStep(shouldAbort, [this] {return hasActionPoint(); }, [this, path]() { state().setMoveAction(path); return true; }, "make attack move");
 
     static const int MIN_TICKS_GAP = 10;
+    VehiclePtr firstUnit = attackWith.m_units.front().lock();
     int nTicksGap = std::max(MIN_TICKS_GAP, static_cast<int>(path.length() / firstUnit->getMaxSpeed() / 4));
 
     pushBackStep(shouldAbort, WaitSomeTicks{ nTicksGap }, DoNothing(), "wait next attack", StepType::ALLOW_MULTITASK);
-    pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicopters::doAttack, this, shouldAbort, shouldProceed, std::cref(attackWith), std::cref(attackTarget)), "attack again");
+    pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicopters::doAttack, this, shouldAbort, shouldProceed, std::cref(attackTarget)), "attack again");
     return true;
 }
 
@@ -135,7 +106,7 @@ DefendHelicopters::DefendHelicopters(State& state, GoalManager& goalManager)
         const VehicleGroup& attacker = fighterGroup();
         const VehicleGroup& target   = allienFighters();
 
-        return doAttack(abortCheckFn, std::bind(isReadyForAttack, std::cref(attacker), std::cref(target)), attacker, target); 
+        return doAttack(abortCheckFn, std::bind(isReadyForAttack, std::cref(attacker), std::cref(target)), target); 
     };
     
     auto shouldStartAttack = [&isNear, &isReadyForAttack, this]()
@@ -350,5 +321,41 @@ Point DefendHelicopters::getAircraftBypassPoint(const VehicleGroup& fighters, co
 	});
 
 	return solutionIt != std::end(solutions) ? *solutionIt : Point();
+}
+
+Point DefendHelicopters::getFightersTargetPoint(const VehicleGroup& attackTarget, const VehicleGroup& attackWith)
+{
+    const Rect& attackRect = attackTarget.m_rect;
+
+    static const double sqrt2 = std::sqrt(2);
+    VehiclePtr firstUnit = attackWith.m_units.front().lock();
+
+    double aerialAttackRange = firstUnit->getAerialAttackRange();
+    double radius = firstUnit->getRadius();
+
+    const Point& displacement1 = Point(aerialAttackRange - radius, aerialAttackRange - radius) / sqrt2 / 1.5;
+    const Point& displacement2 = Point(-(aerialAttackRange - radius), aerialAttackRange - radius) / sqrt2 / 1.5;
+    const Point& displacement3 = Point(aerialAttackRange - radius, -(aerialAttackRange - radius)) / sqrt2 / 1.5;
+    const Point& displacement4 = Point(-(aerialAttackRange - radius), -(aerialAttackRange - radius)) / sqrt2 / 1.5;
+
+    Point attackPoints[] =
+    {
+        attackTarget.m_center,
+
+        attackRect.m_topLeft, attackRect.m_bottomRight, attackRect.bottomLeft(), attackRect.topRight(),
+        attackRect.m_topLeft + displacement1, attackRect.m_bottomRight + displacement1, attackTarget.m_center + displacement1,
+        attackRect.bottomLeft() + displacement1, attackRect.topRight() + displacement1,
+    };
+
+    const VehicleGroup& coveredGroup = helicopterGroup();
+    std::sort(std::begin(attackPoints), std::end(attackPoints),
+        [&coveredGroup](const Point& left, const Point& right) { return coveredGroup.m_center.getSquareDistance(left) < coveredGroup.m_center.getSquareDistance(right); });
+
+    const VehicleGroup& obstacle = helicopterGroup();
+
+    std::stable_partition(std::begin(attackPoints), std::end(attackPoints),
+        [this, &attackWith, &obstacle](const Point& p) { return attackWith.isPathFree(p, Obstacle(obstacle), m_helicopterIteration); });
+
+    return attackPoints[0];
 }
 
