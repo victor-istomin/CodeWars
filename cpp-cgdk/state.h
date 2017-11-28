@@ -37,6 +37,9 @@ private:
     GroupByType   m_teammates;
     bool          m_isMoveCommitted;
 
+    Rect m_teammatesRect;
+    Rect m_alliensRect;
+
     const VehicleGroup* m_nuclearGuide;
 
     const model::World*  m_world;
@@ -46,6 +49,9 @@ private:
 
     struct Constants;
     std::unique_ptr<Constants> m_constants;
+
+    static void updateGroupsRect(const GroupByType& groupsMap, Rect& rect);
+
 
     struct Constants
     {
@@ -120,9 +126,12 @@ public:
 
     bool isEnemyCoveredByAnother(model::VehicleType groupId, VehicleGroup& mergedGroups) const;
 
+	const Rect& getTeammatesRect() const                        { return m_teammatesRect; }
+	double getDistanceToAlliensRect() const;
+
 
     void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move);
-    
+
 	// actions
 
     void setSelectAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_);

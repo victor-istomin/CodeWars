@@ -87,6 +87,30 @@ void State::update(const model::World& world, const model::Player& me, const mod
 		if (guideUnit)
 			m_nuclearGuide = &teammates(guideUnit->getType());
 	}
+
+	updateGroupsRect(m_teammates, m_teammatesRect);
+	updateGroupsRect(m_alliens,   m_alliensRect);
+}
+
+void State::updateGroupsRect(const GroupByType& groupsMap, Rect& rect)
+{
+	static const Rect k_nullRect = Rect();
+
+	rect = k_nullRect;
+
+	for (const auto& idGroupPair : groupsMap)
+	{
+		const Rect& groupRect = idGroupPair.second.m_rect;
+
+		if (rect == k_nullRect)
+		{
+			rect = groupRect;
+		}
+		else
+		{
+			rect.ensureContains(groupRect);
+		}
+	}
 }
 
 void State::setSelectAction(const Rect& rect, model::VehicleType vehicleType /*= model::VehicleType::_UNKNOWN_*/)
@@ -239,4 +263,25 @@ bool State::isEnemyCoveredByAnother(model::VehicleType groupId, VehicleGroup& me
         mergedGroups.update();
 
     return isCovered;
+}
+
+// return closest distance between teammate rect and alliens rect. 0 if rect overlaps.
+double State::getDistanceToAlliensRect() const
+{
+	if (m_teammatesRect.overlaps(m_alliensRect))
+		return 0;
+
+	const Point teammatePoints[] = { m_teammatesRect.m_topLeft, m_teammatesRect.bottomLeft(), 
+	                                 m_teammatesRect.topRight(), m_teammatesRect.m_bottomRight };
+
+	const Point alliensPoints[] = { m_alliensRect.m_topLeft,  m_alliensRect.bottomLeft(),
+	                                m_alliensRect.topRight(), m_alliensRect.m_bottomRight };
+
+	// trivial O(n^2) is just fine when n = 4
+	double closestDistance = teammatePoints[0].getDistanceTo(alliensPoints[0]);
+	for (const Point& teammateCorner : teammatePoints)
+		for (const Point& allienCorner : alliensPoints)
+			closestDistance = std::min(closestDistance, teammateCorner.getDistanceTo(allienCorner));
+
+	return closestDistance;
 }
