@@ -56,27 +56,32 @@ bool Goal::isNoMoveComitted()
 
 bool Goal::checkNuclearLaunch()
 {
-    static const int MIN_TICK_INDEX = 500;
+    static const double LOOKUP_RANGE = 10 * m_state.game()->getFighterSpeed() + m_state.game()->getFighterVisionRange() 
+	                                      + m_state.game()->getTacticalNuclearStrikeRadius();
 
     if (!m_state.isMoveCommitted()
-        && m_state.world()->getTickIndex() >= MIN_TICK_INDEX
+        && m_state.getDistanceToAlliensRect() < LOOKUP_RANGE
         && m_state.player()->getRemainingNuclearStrikeCooldownTicks() == 0)
     {
         const auto& allVehicles = state().getAllVehicles();
 
+		Rect reachableRect = state().getTeammatesRect().inflate(LOOKUP_RANGE);
+
         std::map<double, VehiclePtr> nukeDamageMap;
 
         std::vector<VehiclePtr> teammates;
-        std::vector<VehiclePtr> alliens;
+        std::vector<VehiclePtr> reachangeAlliens;
         teammates.reserve(allVehicles.size());
-        alliens.reserve(allVehicles.size());
+        reachangeAlliens.reserve(allVehicles.size());
 
-        for (const std::pair<long long, VehiclePtr>& vehicle : allVehicles)
+        for (const std::pair<long long, VehiclePtr>& idVehiclePair : allVehicles)
         {
-            if (vehicle.second->getPlayerId() == state().player()->getId())
-                teammates.push_back(vehicle.second);
-            else
-                alliens.push_back(vehicle.second);
+            const VehiclePtr& vehicle = idVehiclePair.second;
+
+            if (vehicle->getPlayerId() == state().player()->getId())
+                teammates.push_back(vehicle);
+            else if (reachableRect.contains(*vehicle))
+                reachangeAlliens.push_back(vehicle);
         }
 
         static const double MIN_HEALTH = 0.5 * 100;    // TODO - remove hardcode
@@ -90,7 +95,7 @@ bool Goal::checkNuclearLaunch()
             double damage = 0;
             double sqaredVr = teammate->getSquaredVisionRange();
 
-            for (const VehiclePtr& enemy : alliens)
+            for (const VehiclePtr& enemy : reachangeAlliens)
                 if (teammate->getSquaredDistanceTo(*enemy) < sqaredVr)
                     damage += enemy->getDurability() * (enemy->getDurability() > MIN_HEALTH ? 1 : 2);
 
@@ -137,13 +142,15 @@ bool Goal::checkNuclearLaunch()
             double visionRange = state().getUnitVisionRange(*teammate) - 2 * teammate->getRadius() - rangeGap; 
             double squaredVR = visionRange * visionRange;
 
-            for (const VehiclePtr& hitPoint : alliens)
+			// TODO - add hitpoints in the middle of alliens or something similar
+
+            for (const VehiclePtr& hitPoint : reachangeAlliens)
             {
                 if (teammate->getSquaredDistanceTo(*hitPoint) > squaredVR)
                     continue;
 
                 double damage = 0;
-                for (const VehiclePtr& enemy : alliens)
+                for (const VehiclePtr& enemy : reachangeAlliens)
                     damage += getDamage(*hitPoint, *enemy);
 
                 for (const VehiclePtr& friendly : teammates)
