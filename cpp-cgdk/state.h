@@ -8,6 +8,7 @@
 #include <utility>
 #include <memory>
 #include <type_traits>
+#include <unordered_map>
 
 #include "model/World.h"
 #include "model/Player.h"
@@ -26,12 +27,14 @@ class State
 public:
     typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
     typedef std::map<Id, VehiclePtr>                      VehicleByID;
+    typedef std::unordered_map<Id, Vec2d>                 SpeedById;
     typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;
     typedef std::vector<Id>                               IdList;
 
 private:
 
     VehicleByID   m_vehicles;
+    SpeedById     m_vehicleSpeed;
     IdList        m_selection;
     GroupByType   m_alliens;
     GroupByType   m_teammates;
@@ -95,6 +98,11 @@ private:
         {}
     };
 
+    void updateSelection();
+    void initConstants();
+    void updateNuclearGuide();
+    void updateVehicles();
+
 public:
 
     State() : m_world(nullptr), m_game(nullptr), m_move(nullptr), m_player(nullptr)
@@ -132,7 +140,9 @@ public:
 
     void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move);
 
-	// actions
+    void updateGroups();
+
+    // actions
 
     void setSelectAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_);
     void setSelectAction(const VehicleGroup& group);

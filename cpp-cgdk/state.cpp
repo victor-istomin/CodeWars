@@ -8,88 +8,117 @@ void State::update(const model::World& world, const model::Player& me, const mod
 	m_game   = &game;
 	m_move   = &move;
 
-	if (!m_constants)
-	{
-		auto itHelicopter = std::find_if(m_world->getNewVehicles().begin(), m_world->getNewVehicles().end(),
-			                             [](const model::Vehicle& v) { return v.getType() == model::VehicleType::HELICOPTER; });
-
-        const int tileSize = static_cast<int>(game.getWorldWidth()) / world.getWeatherByCellXY().size();
-
-		double helicopterRadius = itHelicopter != m_world->getNewVehicles().end() ? itHelicopter->getRadius() : 2;
-		m_constants = std::make_unique<Constants>(helicopterRadius, Constants::PointInt(tileSize, tileSize),
-            Constants::GroundVisibility {
-                { model::TerrainType::FOREST, game.getForestTerrainVisionFactor() },
-                { model::TerrainType::PLAIN,  game.getPlainTerrainVisionFactor() },
-                { model::TerrainType::SWAMP,  game.getSwampTerrainVisionFactor() }
-            },
-            Constants::AirVisibility {
-                { model::WeatherType::CLEAR, game.getClearWeatherVisionFactor() },
-                { model::WeatherType::CLOUD, game.getCloudWeatherVisionFactor() },
-                { model::WeatherType::RAIN,  game.getRainWeatherVisionFactor() }
-            },
-            Constants::UnitVisionRadius {
-                { model::VehicleType::ARRV,       game.getArrvVisionRange()},
-                { model::VehicleType::FIGHTER,    game.getFighterVisionRange()},
-                { model::VehicleType::HELICOPTER, game.getHelicopterVisionRange()},
-                { model::VehicleType::IFV,        game.getIfvVisionRange()},
-                { model::VehicleType::TANK,       game.getTankVisionRange()}
-            },
-            world.getTerrainByCellXY(), world.getWeatherByCellXY());
-	}
+    initConstants();
 
 	m_isMoveCommitted = false;
 
-	for (const model::Vehicle& v : world.getNewVehicles())
-	{
-		auto newVehicle = std::make_shared<model::Vehicle>(v);
-		m_vehicles[v.getId()] = newVehicle;
+    updateVehicles();
 
-		if (v.getPlayerId() == me.getId())
-			m_teammates[v.getType()].add(newVehicle);
-		else
-			m_alliens[v.getType()].add(newVehicle);
-	}
+    updateGroups();
 
-	for (const model::VehicleUpdate& update : world.getVehicleUpdates())
-	{
-		if (update.getDurability() != 0)
-			vehicleById(update.getId()) = model::Vehicle(vehicleById(update.getId()), update);
-		else
-			m_vehicles.erase(update.getId());
-	}
+    updateSelection();
 
-	for (auto& group : m_teammates)
-		group.second.update();
+    updateNuclearGuide();
 
-	for (auto& group : m_alliens)
-		group.second.update();
+}
 
-	IdList selection;
-	selection.reserve(m_vehicles.size());
+void State::updateGroups()
+{
+    for (auto& group : m_teammates)
+        group.second.update();
+    updateGroupsRect(m_teammates, m_teammatesRect);
 
-	for (const auto& idPointnerPair : m_vehicles)
-	{
-		const VehiclePtr& vehicle = idPointnerPair.second;
-		if (vehicle->getPlayerId() == me.getId() && vehicle->isSelected())
-			selection.push_back(vehicle->getId());
-	}
+    for (auto& group : m_alliens)
+        group.second.update();
+    updateGroupsRect(m_alliens, m_alliensRect);
+}
 
-	std::sort(selection.begin(), selection.end());
-	m_selection = std::move(selection);
+void State::updateVehicles()
+{
+    for (const model::Vehicle& v : m_world->getNewVehicles())
+    {
+        auto newVehicle = std::make_shared<model::Vehicle>(v);
+        m_vehicles[v.getId()] = newVehicle;
 
-	m_nuclearGuide = nullptr;
-	if (me.getNextNuclearStrikeTickIndex() != -1)
-	{
-		Id guideId = me.getNextNuclearStrikeVehicleId();
+        if (v.getPlayerId() == m_player->getId())
+            m_teammates[v.getType()].add(newVehicle);
+        else
+            m_alliens[v.getType()].add(newVehicle);
+    }
 
-		VehiclePtr guideUnit = m_vehicles[guideId];
+    for (const model::VehicleUpdate& update : m_world->getVehicleUpdates())
+    {
+        if (update.getDurability() != 0)
+            vehicleById(update.getId()) = model::Vehicle(vehicleById(update.getId()), update);
+        else
+            m_vehicles.erase(update.getId());
+    }
+}
 
-		if (guideUnit)
-			m_nuclearGuide = &teammates(guideUnit->getType());
-	}
+void State::updateNuclearGuide()
+{
+    m_nuclearGuide = nullptr;
+    if (m_player->getNextNuclearStrikeTickIndex() != -1)
+    {
+        Id guideId = m_player->getNextNuclearStrikeVehicleId();
 
-	updateGroupsRect(m_teammates, m_teammatesRect);
-	updateGroupsRect(m_alliens,   m_alliensRect);
+        VehiclePtr guideUnit = m_vehicles[guideId];
+
+        if (guideUnit)
+            m_nuclearGuide = &teammates(guideUnit->getType());
+    }
+}
+
+void State::updateSelection()
+{
+    IdList selection;
+    selection.reserve(m_vehicles.size());
+
+    for (const auto& idPointnerPair : m_vehicles)
+    {
+        const VehiclePtr& vehicle = idPointnerPair.second;
+        if (vehicle->getPlayerId() == m_player->getId() && vehicle->isSelected())
+            selection.push_back(vehicle->getId());
+    }
+
+    std::sort(selection.begin(), selection.end());
+    m_selection = std::move(selection);
+}
+
+void State::initConstants()
+{
+    if (m_constants)
+        return;
+
+    auto itHelicopter = std::find_if(m_world->getNewVehicles().begin(), m_world->getNewVehicles().end(),
+        [](const model::Vehicle& v) { return v.getType() == model::VehicleType::HELICOPTER; });
+
+    const int tileSize = static_cast<int>(m_game->getWorldWidth()) / m_world->getWeatherByCellXY().size();
+
+    double helicopterRadius = itHelicopter != m_world->getNewVehicles().end() ? itHelicopter->getRadius() : 2;
+
+    m_constants = std::make_unique<Constants>
+    (
+        helicopterRadius, Constants::PointInt(tileSize, tileSize),
+        Constants::GroundVisibility{
+            { model::TerrainType::FOREST, m_game->getForestTerrainVisionFactor() },
+            { model::TerrainType::PLAIN,  m_game->getPlainTerrainVisionFactor() },
+            { model::TerrainType::SWAMP,  m_game->getSwampTerrainVisionFactor() }
+        },
+        Constants::AirVisibility{
+            { model::WeatherType::CLEAR, m_game->getClearWeatherVisionFactor() },
+            { model::WeatherType::CLOUD, m_game->getCloudWeatherVisionFactor() },
+            { model::WeatherType::RAIN,  m_game->getRainWeatherVisionFactor() }
+        },
+        Constants::UnitVisionRadius{
+            { model::VehicleType::ARRV,       m_game->getArrvVisionRange()},
+            { model::VehicleType::FIGHTER,    m_game->getFighterVisionRange()},
+            { model::VehicleType::HELICOPTER, m_game->getHelicopterVisionRange()},
+            { model::VehicleType::IFV,        m_game->getIfvVisionRange()},
+            { model::VehicleType::TANK,       m_game->getTankVisionRange()}
+        },
+        m_world->getTerrainByCellXY(), m_world->getWeatherByCellXY()
+    );
 }
 
 void State::updateGroupsRect(const GroupByType& groupsMap, Rect& rect)
