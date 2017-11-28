@@ -106,8 +106,6 @@ void GoalManager::doMultitasking(const Goal* interruptedGoal)
         if (!goal->isEligibleForBackgroundMode(interruptedGoal))
             continue;
 
-        // TODO - need fix this in order to allow aircraft moves in background 2 steps, (select + move)
-
         goal->performStep(*this, true);
 		if (m_state.isMoveCommitted())
 		{
