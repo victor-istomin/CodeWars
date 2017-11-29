@@ -19,7 +19,6 @@ void State::update(const model::World& world, const model::Player& me, const mod
     updateSelection();
 
     updateNuclearGuide();
-
 }
 
 void State::updateGroups()
@@ -46,18 +45,51 @@ void State::updateVehicles()
             m_alliens[v.getType()].add(newVehicle);
     }
 
+    SpeedById oldSpeed;
+    oldSpeed.reserve(m_vehicles.size());
+    m_vehicleSpeed.swap(oldSpeed);
+
+    static const double k_decay = 0.25;
+
+    for (const auto& idSpeedPair : oldSpeed)
+    {
+        Vec2d lastSpeed = idSpeedPair.second;
+        if (lastSpeed != Vec2d())
+            m_vehicleSpeed.emplace(std::make_pair(idSpeedPair.first, lastSpeed * k_decay));
+    }
+
     for (const model::VehicleUpdate& update : m_world->getVehicleUpdates())
     {
         if (update.getDurability() != 0)
-            vehicleById(update.getId()) = model::Vehicle(vehicleById(update.getId()), update);
+        {
+            Id              id       = update.getId();
+            model::Vehicle& vehicle  = vehicleById(id);
+            Point           oldPoint = vehicle;
+
+            vehicle = model::Vehicle(vehicle, update);
+
+            Vec2d speed = vehicle - oldPoint;
+            if (oldSpeed[id] != Vec2d() && speed.length() < 0.1)
+            {
+                // just stopped, slightly smooth speed...
+                speed = (speed + oldSpeed[id]) * k_decay;
+            }
+
+            m_vehicleSpeed[id] = speed;
+        }
         else
+        {
             m_vehicles.erase(update.getId());
+        }
     }
 }
 
+#include <iostream>
 void State::updateNuclearGuide()
 {
-    m_nuclearGuide = nullptr;
+    static VehicleCache s_guideDbg;
+
+    m_nuclearGuideGroup = nullptr;
     if (m_player->getNextNuclearStrikeTickIndex() != -1)
     {
         Id guideId = m_player->getNextNuclearStrikeVehicleId();
@@ -65,7 +97,22 @@ void State::updateNuclearGuide()
         VehiclePtr guideUnit = m_vehicles[guideId];
 
         if (guideUnit)
-            m_nuclearGuide = &teammates(guideUnit->getType());
+        {
+            s_guideDbg = guideUnit;
+            m_nuclearGuideGroup = &teammates(guideUnit->getType());
+
+            Vec2d speed = m_vehicleSpeed[guideId];
+
+            double guideVisibility = getUnitVisionRangeAt(*guideUnit, *guideUnit);
+            std::cout << " gv: " << guideVisibility << " @ " << guideUnit->getX() << ", " << guideUnit->getY()
+                << "; tick: " << m_world->getTickIndex()
+                << "; speed: " << speed.m_x << ", " << speed.m_y << std::endl;
+        }
+    }
+
+    if (m_nuclearGuideGroup == nullptr && s_guideDbg.lock())
+    {
+        std::cout << "new gv: " << getUnitVisionRangeAt(*s_guideDbg.lock(), *s_guideDbg.lock()) << std::endl;
     }
 }
 
@@ -105,10 +152,20 @@ void State::initConstants()
             { model::TerrainType::PLAIN,  m_game->getPlainTerrainVisionFactor() },
             { model::TerrainType::SWAMP,  m_game->getSwampTerrainVisionFactor() }
         },
+        Constants::GroundMobility{
+            { model::TerrainType::FOREST, m_game->getForestTerrainSpeedFactor() },
+            { model::TerrainType::PLAIN,  m_game->getPlainTerrainSpeedFactor() },
+            { model::TerrainType::SWAMP,  m_game->getSwampTerrainSpeedFactor() }
+        },
         Constants::AirVisibility{
             { model::WeatherType::CLEAR, m_game->getClearWeatherVisionFactor() },
             { model::WeatherType::CLOUD, m_game->getCloudWeatherVisionFactor() },
             { model::WeatherType::RAIN,  m_game->getRainWeatherVisionFactor() }
+        },
+        Constants::AirMobility{
+            { model::WeatherType::CLEAR, m_game->getClearWeatherSpeedFactor() },
+            { model::WeatherType::CLOUD, m_game->getCloudWeatherSpeedFactor() },
+            { model::WeatherType::RAIN,  m_game->getRainWeatherSpeedFactor() }
         },
         Constants::UnitVisionRadius{
             { model::VehicleType::ARRV,       m_game->getArrvVisionRange()},
@@ -201,6 +258,18 @@ void State::setMoveAction(const Vec2d& vector)
 	m_move->setY(vector.m_y);
 
 	m_isMoveCommitted = true;
+
+    if (m_player->getNextNuclearStrikeVehicleId() != -1)
+    {
+        Id guideId = m_player->getNextNuclearStrikeVehicleId();
+        Point hitPoint = Point{ m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY() };
+        VehiclePtr guide = m_vehicles[guideId];
+
+        bool isGuideMoving = std::find(m_selection.begin(), m_selection.end(), guideId) == m_selection.end();
+        double actualDistance = hitPoint.getSquareDistance(*guide);
+        double futureDistance = hitPoint.getSquareDistance(Point(*guide) + vector);
+        assert(!isGuideMoving || futureDistance <= actualDistance);
+    }
 }
 
 void State::setNukeAction(const Point& point, const model::Vehicle& guide)
@@ -223,9 +292,9 @@ void State::setScaleAction(double factor, const Point& center)
 	m_isMoveCommitted = true;
 }
 
-State::Constants::PointInt State::Constants::getTileIndex(const model::Vehicle& v) const
+State::Constants::PointInt State::Constants::getTileIndex(const Point& p) const
 {
-    return PointInt(static_cast<int>(v.getX()) / m_tileSize.m_x, static_cast<int>(v.getY()) / m_tileSize.m_y);
+    return PointInt(static_cast<int>(p.m_x) / m_tileSize.m_x, static_cast<int>(p.m_y) / m_tileSize.m_y);
 }
 
 model::WeatherType State::Constants::getWeather(const PointInt& tile) const
@@ -257,12 +326,40 @@ double State::Constants::getVisionFactor(model::TerrainType terrain) const
     return found != m_groundVisibility.end() ? found->second : 1.0;
 }
 
-double State::getUnitVisionRange(const model::Vehicle& v) const
+double State::Constants::getMobilityFactor(model::WeatherType weather) const
 {
-    Constants::PointInt tile = m_constants->getTileIndex(v);
+    auto found = m_airMobility.find(weather);
+    assert(found != m_airMobility.end());
+    return found != m_airMobility.end() ? found->second : 1.0;
+}
+
+double State::Constants::getMobilityFactor(model::TerrainType terrain) const
+{
+    auto found = m_groundMobility.find(terrain);
+    assert(found != m_groundMobility.end());
+    return found != m_groundMobility.end() ? found->second : 1.0;
+}
+
+double State::getUnitVisionRangeAt(const model::Vehicle& v, const Point& pos) const
+{
+    Constants::PointInt tile = m_constants->getTileIndex(pos);
     double initial = m_constants->getMaxVisionRange(v.getType());
     double factor = v.isAerial() ? m_constants->getVisionFactor(m_constants->getWeather(tile)) : m_constants->getVisionFactor(m_constants->getTerrain(tile));
     return initial * factor;
+}
+
+double State::getUnitSpeedAt(const model::Vehicle& v, const Point& pos) const
+{
+    Constants::PointInt tile = m_constants->getTileIndex(pos);
+    double factor = v.isAerial() ? m_constants->getMobilityFactor(m_constants->getWeather(tile)) : m_constants->getMobilityFactor(m_constants->getTerrain(tile));
+    return v.getMaxSpeed() * factor;
+}
+
+const Vec2d& State::getActualUnitSpeed(const model::Vehicle& v) const
+{
+    static const Vec2d k_null = Vec2d();
+    auto found = m_vehicleSpeed.find(v.getId());
+    return found != m_vehicleSpeed.end() ? found->second : k_null;
 }
 
 // check is this enemy group intersects with another enemy group in order to detect massive rush

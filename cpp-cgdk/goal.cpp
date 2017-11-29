@@ -107,9 +107,10 @@ bool Goal::checkNuclearLaunch()
         {
             Point      m_point;
             double     m_damage;
+            double     m_distance;
             VehiclePtr m_guide;
 
-            DamageInfo(const Point& p, double damage, const VehiclePtr& guide) : m_point(p), m_damage(damage), m_guide(guide) {}
+            DamageInfo(const Point& p, double damage, const VehiclePtr& guide) : m_point(p), m_damage(damage), m_distance(0), m_guide(guide) {}
         };
 
         static const int LOOKUP_ITEMS_LIMIT = 50;
@@ -138,28 +139,35 @@ bool Goal::checkNuclearLaunch()
 
             // TODO - predict terrain where this unit will go next 30 ticks!
 
-            double rangeGap = teammate->getRadius();
-            double visionRange = state().getUnitVisionRange(*teammate) - 2 * teammate->getRadius() - rangeGap; 
+            double visionRange = nukePredictUnitVisionRange(teammate);
             double squaredVR = visionRange * visionRange;
 
 			// TODO - add hitpoints in the middle of alliens or something similar
 
-            for (const VehiclePtr& hitPoint : reachangeAlliens)
+            for (const VehiclePtr& hitPointCandidate : reachangeAlliens)
             {
-                if (teammate->getSquaredDistanceTo(*hitPoint) > squaredVR)
+                const double sqaredDistance = teammate->getSquaredDistanceTo(*hitPointCandidate);
+                if (sqaredDistance >= squaredVR)
                     continue;
+
+                Point hitPoint = Point(*hitPointCandidate) + (state().getActualUnitSpeed(*hitPointCandidate) * 20);
 
                 double damage = 0;
                 for (const VehiclePtr& enemy : reachangeAlliens)
-                    damage += getDamage(*hitPoint, *enemy);
+                    damage += getDamage(hitPoint, *enemy);
 
                 for (const VehiclePtr& friendly : teammates)
-                    damage += getDamage(*hitPoint, *friendly);
+                    damage += getDamage(hitPoint, *friendly);
 
                 if (bestDamage.m_damage < damage)
                 {
                     bestDamage.m_damage = damage;
-                    bestDamage.m_point = *hitPoint;
+                    bestDamage.m_point  = hitPoint;
+                    bestDamage.m_distance = std::sqrt(sqaredDistance);
+
+                    bestDamage.m_damage *= (bestDamage.m_distance / teammate->getVisionRange());
+
+                    assert(bestDamage.m_distance < visionRange);
                 }
             }
 
@@ -169,6 +177,9 @@ bool Goal::checkNuclearLaunch()
 
         // pre-sort DESC by guide durability
         std::sort(targets.begin(), targets.end(), [](const DamageInfo& a, const DamageInfo& b) { return a.m_guide->getDurability() > b.m_guide->getDurability(); });
+
+        // pre-sort DESC by guide distance to target
+        std::stable_sort(targets.begin(), targets.end(), [](const DamageInfo& a, const DamageInfo& b) { return a.m_distance > b.m_distance; });
 
         // sort DESC by damage
         std::stable_sort(targets.begin(), targets.end(), [](const DamageInfo& a, const DamageInfo& b) { return a.m_damage > b.m_damage; });
@@ -180,4 +191,34 @@ bool Goal::checkNuclearLaunch()
     }
 
     return m_state.isMoveCommitted();
+}
+
+double Goal::nukePredictUnitVisionRange(VehiclePtr teammate)
+{
+    double visionRange = state().getUnitVisionRangeAt(*teammate, *teammate);
+
+    static const Vec2d& k_nullSpeed = Vec2d();
+    const Vec2d& speed = state().getActualUnitSpeed(*teammate);
+    if (speed != k_nullSpeed)
+    {
+        // simulate movement
+        const Vec2d direction = Vec2d(speed).normalize();
+        Point actualPos = *teammate;
+
+        int tick = 1;
+        do 
+        {
+            Vec2d actualSpeed = direction * state().getUnitSpeedAt(*teammate, actualPos);
+            actualPos += actualSpeed;
+
+            double actualRange = state().getUnitVisionRangeAt(*teammate, actualPos);
+            if (actualRange < visionRange)
+                visionRange = actualRange;
+
+            ++tick;
+        } while (tick <= state().game()->getTacticalNuclearStrikeDelay());
+    }
+
+    const double rangeGap = 2 * teammate->getRadius();
+    return visionRange - 2 * teammate->getRadius() - rangeGap;
 }

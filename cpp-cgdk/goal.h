@@ -48,6 +48,8 @@ private:
     bool isNoMoveComitted();
     bool checkNuclearLaunch();
 
+    double nukePredictUnitVisionRange(VehiclePtr teammate);
+
     // check if this goal could be performed in multitasking mode when 'interrupted' has nothing to do right now
     virtual bool isCompatibleWith(const Goal* interrupted) { return false; }
 
