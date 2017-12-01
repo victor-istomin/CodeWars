@@ -1,4 +1,7 @@
 #include "state.h"
+#include <cmath>
+
+using namespace model;   // TODO: cleanup
 
 void State::update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)
 {
@@ -20,6 +23,7 @@ void State::update(const model::World& world, const model::Player& me, const mod
 
     updateNuclearGuide();
 
+    updateEnemyStats();
 }
 
 void State::updateGroups()
@@ -53,6 +57,54 @@ void State::updateVehicles()
         else
             m_vehicles.erase(update.getId());
     }
+}
+
+void State::updateEnemyStats()
+{
+	const Point myBase = { 100, 100 };
+
+	static const VehicleType s_groundUnits[] = { VehicleType::ARRV, VehicleType::TANK, VehicleType::IFV };
+	static const VehicleType airUnits[]      = { VehicleType::FIGHTER, VehicleType::HELICOPTER };
+
+	static const int MAX_START_PHASE_TICKS = 3000; // QuickStart guy arrives at ~500 tick, so this looks enough for start
+	auto notExistent = [this](VehicleType type) { return m_alliens.find(type) == m_alliens.end(); };
+
+	bool isStartPhase = world()->getTickIndex() < MAX_START_PHASE_TICKS
+		&& std::find_if(std::begin(s_groundUnits), std::end(s_groundUnits), notExistent) == std::end(s_groundUnits)
+		&& std::find_if(std::begin(s_groundUnits), std::end(s_groundUnits), notExistent) == std::end(s_groundUnits);
+
+	if (isStartPhase)
+	{
+		// --- detect whether aircraft rushes me ahead of other enemy troops 
+
+		const VehicleGroup& enemyFighters    = alliens(VehicleType::FIGHTER);
+		const VehicleGroup& enemyHelicopters = alliens(VehicleType::HELICOPTER);
+		const Point&        fightersCenter   = enemyFighters.m_center;
+
+		// TODO: detect nuking by 1-2 aircrafts
+
+		const double nearestAirEnemydistanceSq = std::min(myBase.getSquareDistance(fightersCenter), myBase.getSquareDistance(enemyHelicopters.m_center));
+
+		auto isAheadOfAircraft = [this, &myBase, &nearestAirEnemydistanceSq](VehicleType type) { return myBase.getSquareDistance(alliens(type).m_center) < nearestAirEnemydistanceSq; };
+		bool isAircraftAhead   = std::find_if(std::begin(s_groundUnits), std::end(s_groundUnits), isAheadOfAircraft) == std::end(s_groundUnits);
+
+		if (isAircraftAhead)
+		{
+			double aircraftGap = std::numeric_limits<double>::max();
+			for (VehicleType groundType : s_groundUnits)
+				aircraftGap = std::min(aircraftGap, fightersCenter.getDistanceTo(alliens(groundType).m_center));
+
+			const double s_stillTogetherDistance = std::hypot(enemyFighters.m_rect.height(), enemyFighters.m_rect.width());
+			isAircraftAhead = aircraftGap > s_stillTogetherDistance;
+		}
+
+		if (isAircraftAhead)
+		{
+			m_enemyStats.m_startedWithAirRush++;
+		}
+
+		// ---
+	}
 }
 
 void State::updateNuclearGuide()

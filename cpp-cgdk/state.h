@@ -31,6 +31,13 @@ public:
     typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;
     typedef std::vector<Id>                               IdList;
 
+	struct EnemyStrategyStats
+	{
+		int m_startedWithAirRush  = 0;     // tried to start with rushing me with aircraft
+		int m_startedWithSlowHeap = 0;     // tried to make a heap with all units and slowly go to my base
+	};
+
+
 private:
 
     VehicleByID   m_vehicles;
@@ -52,6 +59,7 @@ private:
 
     struct Constants;
     std::unique_ptr<Constants> m_constants;
+	EnemyStrategyStats   m_enemyStats;
 
     static void updateGroupsRect(const GroupByType& groupsMap, Rect& rect);
 
@@ -102,6 +110,7 @@ private:
     void initConstants();
     void updateNuclearGuide();
     void updateVehicles();
+	void updateEnemyStats();
 
 public:
 
