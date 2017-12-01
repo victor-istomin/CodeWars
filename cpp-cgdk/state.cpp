@@ -120,7 +120,7 @@ void State::updateEnemyStats()
         for(size_t i = 0; i < k_unitTypes; ++i)
         { 
             const Rect& groupRect = alliens(s_allUnits[i]).m_rect;
-            for (size_t j = i + 1; i < k_unitTypes; ++j)
+            for (size_t j = i + 1; j < k_unitTypes; ++j)
             {
                 const Rect& otherRect = alliens(s_allUnits[j]).m_rect;
                 if (groupRect.overlaps(otherRect))

@@ -7,10 +7,11 @@
 
 namespace goals
 {
-    class DefendHelicopters : public Goal
+    class DefendHelicoptersFromRush : public Goal
     {
-        const int    MAX_DEFEND_TICK   = 8000;
-        const double MIN_HEALTH_FACTOR = 0.03;
+        const int    MAX_DEFEND_TICK      = 8000;
+        const int    DEFEND_DECISION_TICK = 500;   // QuickStart guy is near my base on this tick. However, current code needs ~200 ticks from start to detect rush
+        const double MIN_HEALTH_FACTOR    = 0.03;
 
         struct DoNothing { bool operator()() { return true; } };
 
@@ -35,7 +36,7 @@ namespace goals
 
 
     public:
-        DefendHelicopters(State& state, GoalManager& goalManager);
+        DefendHelicoptersFromRush(State& state, GoalManager& goalManager);
 
 	};
 }

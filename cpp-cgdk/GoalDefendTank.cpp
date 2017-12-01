@@ -5,7 +5,7 @@
 #include "state.h"
 #include "VehicleGroup.h"
 #include "GoalMixTanksAndHealers.h"
-#include "goalDefendHelicopter.h"
+#include "goalDefendHelicoptersFromRush.h"
 #include "goalManager.h"
 #include "goalUtils.h"
 
@@ -337,7 +337,7 @@ GoalDefendTank::~GoalDefendTank()
 
 bool GoalDefendTank::isCompatibleWith(const Goal* interrupted)
 {
-    auto isDefendHelicopters = [](const GoalManager::GoalHolder& goal) { return typeid(*goal.m_goal) == typeid(DefendHelicopters); };
+    auto isDefendHelicopters = [](const GoalManager::GoalHolder& goal) { return typeid(*goal.m_goal) == typeid(DefendHelicoptersFromRush); };
 
     const auto& currentGoals = goalManager().currentGoals();
     bool isDefendHelicopterFinished = std::find_if(currentGoals.begin(), currentGoals.end(), isDefendHelicopters) == currentGoals.end();

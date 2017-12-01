@@ -19,9 +19,6 @@
 #include "geometry.h"
 #include "VehicleGroup.h"
 
-
-
-
 class State
 {
 public:
@@ -142,6 +139,8 @@ public:
     const model::World*  world()    const { return m_world; };
     const model::Player* player()   const { return m_player; };
     const model::Game*   game()     const { return m_game; };
+
+    const EnemyStrategyStats& enemyStrategy() const              { return m_enemyStats; }
 
 	const GroupByType&  teammates() const                        { return m_teammates; }
 	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
