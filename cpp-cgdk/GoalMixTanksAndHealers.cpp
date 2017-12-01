@@ -414,16 +414,18 @@ bool MixTanksAndHealers::scaleGroups()
 		[this](VehicleType left, VehicleType right) { return state().teammates(left).m_center.m_x < state().teammates(right).m_center.m_x; });
 
 	// reverse iteration due to LIFO pushing order
-	double xDisplacement     = leftDisplacementForCell * typesCount;
-	double yArrvDisplacement = 3.3 /* TODO: it's a kind of magic? */ * tankGroup().m_units.front().lock()->getRadius();
-	const double scaleFactor = 1.7;
-	for (auto itType = std::rbegin(groupsLeftToRight); itType != std::rend(groupsLeftToRight); ++itType)
-	{
-		Point scaleDisplacement{ xDisplacement, (*itType == VehicleType::ARRV ? yArrvDisplacement : 0) };
+    double xDisplacement     = leftDisplacementForCell * typesCount;
+    double yArrvDisplacement = 11 /* TODO: it's a kind of magic? */ * tankGroup().m_units.front().lock()->getRadius();
+    double yIfvDesplacement  = 7 * tankGroup().m_units.front().lock()->getRadius();
+    const double scaleFactor = 1.7;
+    for (auto itType = std::rbegin(groupsLeftToRight); itType != std::rend(groupsLeftToRight); ++itType)
+    {
+        double yDisplacement = *itType == VehicleType::ARRV ? yArrvDisplacement : (*itType == VehicleType::IFV ? yIfvDesplacement : 0);
+        Point scaleDisplacement{ xDisplacement, yDisplacement };
 
-		pushNextStep(NeverAbort(), hasActionPoint, getScaleFn(*itType, scaleFactor, scaleDisplacement), "scale unit");
-		xDisplacement -= leftDisplacementForCell;
-	}
+        pushNextStep(NeverAbort(), hasActionPoint, getScaleFn(*itType, scaleFactor, scaleDisplacement), "scale unit");
+        xDisplacement -= leftDisplacementForCell;
+    }
 
     return true;
 }
@@ -432,16 +434,48 @@ bool MixTanksAndHealers::mixGroups()
 {
     const VehicleGroup& arrv = arrvGroup();
     const VehicleGroup& tank = tankGroup();
+    const VehicleGroup& ifv  = ifvGroup();
 
 
     state().setSelectAction(arrvGroup());
-    
-    auto hasActionPoint = [this]() { return state().hasActionPoint(); };
-    
-    Point newArrvPos = Point{ tank.m_center.m_x, arrv.m_center.m_y };
-    Vec2d moveVector = newArrvPos - arrv.m_center;
 
-    pushNextStep(NeverAbort(), hasActionPoint, [this, moveVector]() { state().setMoveAction(moveVector); return true; }, "move arrv into tanks");
+    auto hasActionPoint = [this]() { return state().hasActionPoint(); };
+
+    static const int k_rowsCount = 10;
+
+    auto deselectRowFn = [this](int row) 
+    {
+        Rect arrvRect = arrvGroup().m_rect;
+        double rowHeight = arrvRect.height() / k_rowsCount;
+
+        Rect rowRect = Rect( { arrvRect.m_topLeft.m_x,     arrvRect.m_topLeft.m_y + row * rowHeight }, 
+                             { arrvRect.m_bottomRight.m_x, arrvRect.m_topLeft.m_y + (row + 1) * rowHeight } );
+
+        return [this, rowRect]() { state().setDeselectAction(rowRect); return true; };
+    };
+
+    pushNextStep(NeverAbort(), hasActionPoint, [this, &tank, &arrv]() 
+    { 
+        Vec2d tankMoveVector = Point { tank.m_center.m_x, arrv.m_center.m_y } - arrv.m_center;
+        state().setMoveAction(tankMoveVector); 
+        return true; 
+    }, "move arrv into tanks");
+
+    pushNextStep(NeverAbort(), hasActionPoint, [this, &arrv]() { state().setSelectAction(State::GROUP_ARRV_EVEN); return true; }, "select even healers");
+
+    pushNextStep(NeverAbort(), hasActionPoint, [this, &arrv, &ifv]() 
+    { 
+        Vec2d ifvMoveVector = Point{ ifv.m_center.m_x,  arrv.m_center.m_y } -arrv.m_center;
+        state().setMoveAction(ifvMoveVector); 
+        return true; 
+    }, "move arrv into ifv");
+
+    pushNextStep(NeverAbort(), hasActionPoint, [this, &arrv]() { state().setSelectAction(arrv); return true; }, "select all healers");
+
+    pushNextStep(NeverAbort(), hasActionPoint, [this]() { state().setAssignGroupAction(State::GROUP_ARRV_EVEN); return true; }, "assign even group");
+
+    for(int row = 0; row < k_rowsCount; row += 2)
+        pushNextStep(NeverAbort(), hasActionPoint, deselectRowFn(row), "deselecting row");
 
     return true;
 }
@@ -503,15 +537,21 @@ bool MixTanksAndHealers::revertScale()
             Point center = (group.m_rect.bottomLeft() + group.m_rect.m_bottomRight) / 2;
 
             state().setSelectAction(group);
+
+            static const int k_rowsCount = 10;
+            const Point oneRow   = { 0, group.m_rect.height() / k_rowsCount };
+            const Rect  arrvRect = { group.m_rect.m_topLeft - oneRow, group.m_rect.m_bottomRight - oneRow };
+
+            // LIFO pushing order!
+
             pushNextStep(NeverAbort(), hasActionPoint, [this, center, factor]() { state().setScaleAction(factor, center); return true; }, "scaling");
+            pushNextStep(NeverAbort(), hasActionPoint, [this, arrvRect]         { state().setAddSelectionAction(arrvRect, VehicleType::ARRV); return true; }, "add arrv");
 
             return true;
         };
     };
 
-    const size_t typesCount = std::extent<decltype(s_groundUnits)>::value;
-    VehicleType groupsLeftToRight[typesCount] = { VehicleType::_UNKNOWN_ };
-    std::copy(std::cbegin(s_groundUnits), std::cend(s_groundUnits), std::begin(groupsLeftToRight));
+    VehicleType groupsLeftToRight[] = { VehicleType::IFV, VehicleType::TANK };   // arrv is inside other groups
     std::sort(std::begin(groupsLeftToRight), std::end(groupsLeftToRight),
         [this](VehicleType left, VehicleType right) { return state().teammates(left).m_center.m_x < state().teammates(right).m_center.m_x; });
 

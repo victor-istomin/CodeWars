@@ -105,6 +105,12 @@ private:
 
 public:
 
+    // TODO: move somewhere:
+    enum
+    {
+        GROUP_ARRV_EVEN = 1,
+    };
+
     State() : m_world(nullptr), m_game(nullptr), m_move(nullptr), m_player(nullptr)
             , m_isMoveCommitted(false), m_nuclearGuide(nullptr) 
     {}
@@ -145,8 +151,11 @@ public:
     // actions
 
     void setSelectAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_);
+    void setAddSelectionAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_);
     void setSelectAction(const VehicleGroup& group);
-    void setAddToSelectionAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_);
+    void setSelectAction(int groupId);
+    void setDeselectAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_);
+    void setAssignGroupAction(int groupNumber);
 
     void setMoveAction(const Vec2d& vector);
     void setNukeAction(const Point& point, const model::Vehicle& guide);

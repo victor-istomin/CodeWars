@@ -179,9 +179,32 @@ void State::setSelectAction(const VehicleGroup& group)
 		setSelectAction(group.m_rect, group.m_units.front().lock()->getType());
 }
 
-void State::setAddToSelectionAction(const Rect& rect, model::VehicleType vehicleType /*= model::VehicleType::_UNKNOWN_*/)
+void State::setSelectAction(int groupId)
 {
-	m_move->setAction(model::ActionType::ADD_TO_SELECTION);
+    m_move->setAction(model::ActionType::CLEAR_AND_SELECT);
+    m_move->setGroup(groupId);
+
+    m_isMoveCommitted = true;
+}
+
+void State::setAddSelectionAction(const Rect& rect, model::VehicleType vehicleType /*= model::VehicleType::_UNKNOWN_*/)
+{
+    m_move->setAction(model::ActionType::ADD_TO_SELECTION);
+
+    if (vehicleType != model::VehicleType::_UNKNOWN_)
+        m_move->setVehicleType(vehicleType);
+
+    m_move->setTop(rect.m_topLeft.m_y);
+    m_move->setLeft(rect.m_topLeft.m_x);
+    m_move->setBottom(rect.m_bottomRight.m_y);
+    m_move->setRight(rect.m_bottomRight.m_x);
+
+    m_isMoveCommitted = true;
+}
+
+void State::setDeselectAction(const Rect& rect, model::VehicleType vehicleType /*= model::VehicleType::_UNKNOWN_*/)
+{
+	m_move->setAction(model::ActionType::DESELECT);
 
 	if (vehicleType != model::VehicleType::_UNKNOWN_)
 		m_move->setVehicleType(vehicleType);
@@ -192,6 +215,14 @@ void State::setAddToSelectionAction(const Rect& rect, model::VehicleType vehicle
 	m_move->setRight(rect.m_bottomRight.m_x);
 
 	m_isMoveCommitted = true;
+}
+
+void State::setAssignGroupAction(int groupNumber)
+{
+    m_move->setAction(model::ActionType::ASSIGN);
+    m_move->setGroup(groupNumber);
+
+    m_isMoveCommitted = true;
 }
 
 void State::setMoveAction(const Vec2d& vector)

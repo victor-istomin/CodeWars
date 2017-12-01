@@ -38,7 +38,10 @@ bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, c
     int nTicksGap = std::max(MIN_TICKS_GAP, static_cast<int>(path.length() / firstUnit->getMaxSpeed() / 4));
 
     pushBackStep(shouldAbort, WaitSomeTicks{ nTicksGap }, DoNothing(), "wait next attack", StepType::ALLOW_MULTITASK);
-    pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicopters::doAttack, this, shouldAbort, shouldProceed, std::cref(attackTarget)), "attack again");
+    
+    pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicopters::doAttack, this, shouldAbort, shouldProceed, std::cref(attackTarget)), 
+        "attack again", StepType::ALLOW_MULTITASK);
+
     return true;
 }
 
@@ -121,7 +124,7 @@ DefendHelicopters::DefendHelicopters(State& state, GoalManager& goalManager)
 
 bool DefendHelicopters::isCompatibleWith(const Goal* interrupted)
 {
-	return typeid(*interrupted) == typeid(MixTanksAndHealers);
+	return typeid(*interrupted) == typeid(MixTanksAndHealers) || isAboutToAbort();
 }
 
 Point DefendHelicopters::getActualIfvCoverPos()

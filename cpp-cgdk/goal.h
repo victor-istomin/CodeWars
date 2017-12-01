@@ -89,6 +89,7 @@ protected:
         bool operator()() { return m_ticksRemaining-- <= 0; }
     };
 
+    bool isAboutToAbort() const                   { return m_steps.size() == 1 && m_steps.front()->m_shouldAbort(); }
 
 public:
 
