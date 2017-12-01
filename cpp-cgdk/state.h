@@ -33,10 +33,17 @@ public:
 
 	struct EnemyStrategyStats
 	{
-		int m_startedWithAirRush  = 0;     // tried to start with rushing me with aircraft
-		int m_startedWithSlowHeap = 0;     // tried to make a heap with all units and slowly go to my base
-	};
+        static const float MAX_SCORE;
+        static const float POSITIVE_SCORE;
+        static const float INCREMENT;
+        static const float INCREMENT_DIVIDER;
 
+		float m_startedWithAirRush  = 0;     // start strategy: rushing me with aircraft
+		float m_startedWithSlowHeap = 0;     // start strategy: make a heap with all units and slowly go to my base
+
+        bool isAirRush() const  { return m_startedWithAirRush  >= POSITIVE_SCORE; }
+        bool isSlowHeap() const { return m_startedWithSlowHeap >= POSITIVE_SCORE; }
+	};
 
 private:
 

@@ -3,6 +3,12 @@
 
 using namespace model;   // TODO: cleanup
 
+const float State::EnemyStrategyStats::MAX_SCORE         = 1.0;
+const float State::EnemyStrategyStats::POSITIVE_SCORE    = 0.5 * MAX_SCORE;
+const float State::EnemyStrategyStats::INCREMENT_DIVIDER = 2.0;
+const float State::EnemyStrategyStats::INCREMENT         = MAX_SCORE / INCREMENT_DIVIDER;   // so, limit will be MAX_SCORE
+
+
 void State::update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)
 {
 	assert(me.isMe());
@@ -64,17 +70,21 @@ void State::updateEnemyStats()
 	const Point myBase = { 100, 100 };
 
 	static const VehicleType s_groundUnits[] = { VehicleType::ARRV, VehicleType::TANK, VehicleType::IFV };
-	static const VehicleType airUnits[]      = { VehicleType::FIGHTER, VehicleType::HELICOPTER };
+	static const VehicleType s_allUnits[]    = { VehicleType::ARRV, VehicleType::TANK, VehicleType::IFV , VehicleType::FIGHTER, VehicleType::HELICOPTER };
 
 	static const int MAX_START_PHASE_TICKS = 3000; // QuickStart guy arrives at ~500 tick, so this looks enough for start
 	auto notExistent = [this](VehicleType type) { return m_alliens.find(type) == m_alliens.end(); };
 
-	bool isStartPhase = world()->getTickIndex() < MAX_START_PHASE_TICKS
-		&& std::find_if(std::begin(s_groundUnits), std::end(s_groundUnits), notExistent) == std::end(s_groundUnits)
-		&& std::find_if(std::begin(s_groundUnits), std::end(s_groundUnits), notExistent) == std::end(s_groundUnits);
+    bool isStartPhase = world()->getTickIndex() < MAX_START_PHASE_TICKS
+        && std::find_if(std::begin(s_allUnits), std::end(s_allUnits), notExistent) == std::end(s_allUnits);
 
 	if (isStartPhase)
 	{
+        // --- decay old scores
+
+        m_enemyStats.m_startedWithAirRush  /= EnemyStrategyStats::INCREMENT_DIVIDER;
+        m_enemyStats.m_startedWithSlowHeap /= EnemyStrategyStats::INCREMENT_DIVIDER;
+
 		// --- detect whether aircraft rushes me ahead of other enemy troops 
 
 		const VehicleGroup& enemyFighters    = alliens(VehicleType::FIGHTER);
@@ -100,10 +110,29 @@ void State::updateEnemyStats()
 
 		if (isAircraftAhead)
 		{
-			m_enemyStats.m_startedWithAirRush++;
+			m_enemyStats.m_startedWithAirRush += EnemyStrategyStats::INCREMENT;   // limit is MAX_SCORE
 		}
 
-		// ---
+		// --- detect "slow heap" strategy
+        static const size_t k_unitTypes = std::extent<decltype(s_allUnits)>::value;
+
+        size_t intersections = 0;
+        for(size_t i = 0; i < k_unitTypes; ++i)
+        { 
+            const Rect& groupRect = alliens(s_allUnits[i]).m_rect;
+            for (size_t j = i + 1; i < k_unitTypes; ++j)
+            {
+                const Rect& otherRect = alliens(s_allUnits[j]).m_rect;
+                if (groupRect.overlaps(otherRect))
+                    ++intersections;
+            };            
+        }
+
+        static const size_t k_minIntersectionsInHeap = k_unitTypes - 1;  // all groups intersects with one neighbor
+        if (intersections >= k_minIntersectionsInHeap)
+        {
+            m_enemyStats.m_startedWithSlowHeap += EnemyStrategyStats::INCREMENT;
+        }
 	}
 }
 
@@ -397,3 +426,4 @@ double State::getDistanceToAlliensRect() const
 
 	return closestDistance;
 }
+
