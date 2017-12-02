@@ -37,7 +37,7 @@ bool DefendHelicoptersFromRush::doAttack(Callback shouldAbort, Callback shouldPr
     VehiclePtr firstUnit = attackWith.m_units.front().lock();
     int nTicksGap = std::max(MIN_TICKS_GAP, static_cast<int>(path.length() / firstUnit->getMaxSpeed() / 4));
 
-    pushBackStep(shouldAbort, WaitSomeTicks{ nTicksGap }, DoNothing(), "wait next attack", StepType::ALLOW_MULTITASK);
+    pushBackStep(shouldAbort, WaitSomeTicks { state(), nTicksGap }, DoNothing(), "wait next attack", StepType::ALLOW_MULTITASK);
     
     pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicoptersFromRush::doAttack, this, shouldAbort, shouldProceed, std::cref(attackTarget)), 
         "attack again", StepType::ALLOW_MULTITASK);

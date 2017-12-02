@@ -217,6 +217,7 @@
     <ClCompile Include="GoalDefendTank.cpp" />
     <ClCompile Include="goalManager.cpp" />
     <ClCompile Include="GoalMixTanksAndHealers.cpp" />
+    <ClCompile Include="GoalRushWithAircraft.cpp" />
     <ClCompile Include="model\CircularUnit.cpp" />
     <ClCompile Include="model\Facility.cpp" />
     <ClCompile Include="model\Game.cpp" />
@@ -249,6 +250,7 @@
     <ClInclude Include="GoalDefendTank.h" />
     <ClInclude Include="goalManager.h" />
     <ClInclude Include="GoalMixTanksAndHealers.h" />
+    <ClInclude Include="GoalRushWithAircraft.h" />
     <ClInclude Include="goalUtils.h" />
     <ClInclude Include="model\ActionType.h" />
     <ClInclude Include="model\CircularUnit.h" />

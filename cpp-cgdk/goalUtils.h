@@ -1,5 +1,6 @@
 #pragma once
 #include "VehicleGroup.h"
+#include "state.h"
 
 namespace goals
 {
@@ -23,7 +24,7 @@ namespace goals
 	};
 
 	struct NeverAbort { bool operator()() { return false; } };
-	struct DoNothing { bool operator()() { return true; } };
+	struct DoNothing  { bool operator()() { return true; } };
 
 	struct WaitMove
 	{
@@ -31,6 +32,19 @@ namespace goals
 		Point destination;
 		bool operator()() { return group.m_center == destination; }
 	};
+
+    // TODO: BUG: use world->getTickIndex
+    class WaitSomeTicks
+    {
+        const State& m_state;
+        int          m_stopTick;
+
+    public:
+        WaitSomeTicks(const State& state, int ticksToWait) 
+            : m_state(state), m_stopTick(state.world()->getTickIndex() + ticksToWait)       {}
+
+        bool operator()() const       { return m_state.world()->getTickIndex() >= m_stopTick; }
+    };
 
 }
 

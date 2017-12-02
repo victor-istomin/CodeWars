@@ -281,7 +281,7 @@ bool GoalDefendTank::loopFithersAttack()
                  [this]() { return loopFithersAttack(); },
                  "fighters: defend tank - loop attack enemy");
 
-    pushNextStep([this]() { return abortCheck(); }, WaitSomeTicks{ WAIT_AMOINT }, []() { return true; }, 
+    pushNextStep([this]() { return abortCheck(); }, WaitSomeTicks{ state(), WAIT_AMOINT }, []() { return true; }, 
                  "fighters: defend tank - wait for next iteration", StepType::ALLOW_MULTITASK);
 
     pushNextStep([this]() { return abortCheck(); },

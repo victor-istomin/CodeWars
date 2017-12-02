@@ -2,7 +2,7 @@
 
 #ifndef _DEBUG
 #  ifndef NDEBUG
-#    define NDEBUG
+#    define NDEBUG    // server-side runner doesn't define this
 #  endif
 #endif
 

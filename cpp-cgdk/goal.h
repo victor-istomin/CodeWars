@@ -82,13 +82,6 @@ protected:
     const VehicleGroup& allienHelicopters() const { return m_state.alliens(model::VehicleType::HELICOPTER); }
     const VehicleGroup& allienTanks()       const { return m_state.alliens(model::VehicleType::TANK); }
 
-    struct WaitSomeTicks
-    {
-        int m_ticksRemaining;
-
-        bool operator()() { return m_ticksRemaining-- <= 0; }
-    };
-
     bool isAboutToAbort() const                   { return m_steps.size() == 1 && m_steps.front()->m_shouldAbort(); }
 
 public:
