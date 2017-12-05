@@ -56,8 +56,6 @@ bool RushWithAircraft::doNextFightersMove()
         desiredDistance = far;   // force far distance, because fighter can't attack them. TODO: maybe, overlap with enemy between nuke attacks?
     }
 
-    // TODO: don't retreat in case of guiding nuclear launch?
-
     /*** temporary code: replace this by something more sophisticated */
     //desiredDistance += (fighters.m_rect.height() + fighters.m_rect.width()) / 4; 
     /*****/
@@ -89,10 +87,13 @@ bool RushWithAircraft::doNextFightersMove()
     Point attackPosition   = target.m_position + reverseDirection;
     Vec2d moveVector       = attackPosition - fighters.m_center;    // TODO - unit-perfect aim
 
+    bool isMoveAllowed = validateMoveVector(moveVector);  // don't retreat in case of guiding nuclear launch
+
     state().setSelectAction(fighters);
 
     static const int MIN_TICKS_TO_WAIT = 10;
-    int ticksToWait = std::max(MIN_TICKS_TO_WAIT, static_cast<int>(moveVector.length() / (firstFighter->getMaxSpeed() * 2)));
+    int ticksToWait = isMoveAllowed ? std::max(MIN_TICKS_TO_WAIT, static_cast<int>(moveVector.length() / (firstFighter->getMaxSpeed() * 2)))
+                                    : std::max(1, state().player()->getNextNuclearStrikeTickIndex() - state().world()->getTickIndex());
 
     // LIFO push/pop order!
     // move to attack point, wait some ticks and repeat
@@ -104,10 +105,13 @@ bool RushWithAircraft::doNextFightersMove()
 
     pushNextStep([this]() { return shouldAbort(); }, WaitSomeTicks{ state(), ticksToWait }, DoNothing(), "wait next step", StepType::ALLOW_MULTITASK);
 
-    pushNextStep([this]() { return shouldAbort(); }, 
-                 [this]() { return state().hasActionPoint(); }, 
-                 [this, moveVector]() { state().setMoveAction(moveVector); return true; },
-                 "fighters rush");
+    if (isMoveAllowed)
+    {
+        pushNextStep([this]() { return shouldAbort(); }, 
+                     [this]() { return state().hasActionPoint(); }, 
+                     [this, moveVector]() { state().setMoveAction(moveVector); return true; },
+                     "fighters rush");
+    }
 
     return true;
 }
@@ -167,5 +171,34 @@ RushWithAircraft::TargetInfo RushWithAircraft::getFightersTargetInfo()
     // and then by min distance
     targets.sort([](const TargetInfo& a, const TargetInfo& b) { return a.m_minSqDistance < b.m_minSqDistance; });
 
-    return targets.front();
+    return targets.empty() ? TargetInfo(allienFighters()) : targets.front();   // in case of empty targets list, returns fake target with empty eliminated flag
+}
+
+bool RushWithAircraft::validateMoveVector(Vec2d& moveVector)
+{
+    const VehicleGroup& fighters = fighterGroup();
+
+    bool isMoveAllowed = true;                                   // don't retreat in case of guiding nuclear launch
+    VehiclePtr nuclearGuide = state().nuclearGuideUnit();
+    if (state().nuclearGuideGroup() == &fighters && nuclearGuide != nullptr)
+    {
+        Point nukePoint = state().nuclearMissileTarget();
+        Point nextGuidePoint = Point(*nuclearGuide) + moveVector;
+        assert(nukePoint != Point());
+
+        double nextHighlightDistance = nextGuidePoint.getDistanceTo(nukePoint);
+        double nextVisionRange = state().getUnitVisionRangeAt(*nuclearGuide, nextGuidePoint);
+
+        isMoveAllowed = nextVisionRange >= nextHighlightDistance;
+    }
+
+    static const double MIN_STEP = state().game()->getFighterSpeed() / 8;
+    if (!isMoveAllowed && moveVector.length() > MIN_STEP)
+    {
+        // try adjust move before denying
+        moveVector /= 2;
+        return validateMoveVector(moveVector);
+    }
+
+    return isMoveAllowed;
 }

@@ -155,6 +155,7 @@ public:
 
     const VehicleGroup* nuclearGuideGroup() const                { return m_nuclearGuideGroup; }
     Point nuclearMissileTarget() const                           { return m_nuclearGuideGroup ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
+    VehiclePtr nuclearGuideUnit() const;
 
     bool isMoveCommitted() const                                 { return m_isMoveCommitted; }
     bool hasActionPoint() const                                  { return player()->getRemainingActionCooldownTicks() == 0; }

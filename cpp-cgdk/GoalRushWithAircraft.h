@@ -30,6 +30,7 @@ namespace goals
 
         bool doNextFightersMove();
 
+        bool validateMoveVector(Vec2d& moveVector);
         TargetInfo getFightersTargetInfo();
 
     public:

@@ -393,6 +393,14 @@ double State::Constants::getMobilityFactor(model::TerrainType terrain) const
     return found != m_groundMobility.end() ? found->second : 1.0;
 }
 
+VehiclePtr State::nuclearGuideUnit() const
+{
+    Id guideId = m_player->getNextNuclearStrikeVehicleId();
+
+    auto found = m_vehicles.find(guideId);
+    return found != m_vehicles.end() ? found->second : nullptr;
+}
+
 double State::getUnitVisionRangeAt(const model::Vehicle& v, const Point& pos) const
 {
     Constants::PointInt tile = m_constants->getTileIndex(pos);
