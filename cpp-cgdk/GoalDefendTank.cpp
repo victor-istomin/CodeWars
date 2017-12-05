@@ -34,34 +34,37 @@ bool GoalDefendTank::resolveFightersHelicoptersConflict()
     const VehicleGroup& fighters    = fighterGroup();
     const VehicleGroup& helicopters = helicopterGroup();
 
-    if (fighters.m_rect.overlaps(helicopters.m_rect))
+	Rect safeFightersRect    = fighters.m_rect.inflate(state().game()->getVehicleRadius());
+	Rect safeHelicoptersRect = helicopters.m_rect.inflate(state().game()->getVehicleRadius());
+
+    if (safeFightersRect.overlaps(safeHelicoptersRect))
     {
-        Vec2d fightersSpeed    = Vec2d(fighters.m_center - helicopters.m_center).truncate(state().game()->getFighterSpeed());
-        Vec2d helicoptersSpeed = Vec2d(helicopters.m_center - fighters.m_center).truncate(state().game()->getHelicopterSpeed());
+        Vec2d fightersDirection    = Vec2d(fighters.m_center - helicopters.m_center).truncate(state().game()->getFighterSpeed());
+        Vec2d helicoptersDirection = Vec2d(helicopters.m_center - fighters.m_center).truncate(state().game()->getHelicopterSpeed());
 
         static const double FIGHTER_DISPLACEMENT    = 300;
         static const double HELICOPTER_DISPLACEMENT = 150;
 
-        const int maxIterations = static_cast<int>(std::max(std::ceil(FIGHTER_DISPLACEMENT / fightersSpeed.length()), 
-                                                            std::ceil(HELICOPTER_DISPLACEMENT / helicoptersSpeed.length())));
+        const int maxIterations = static_cast<int>(std::max(std::ceil(FIGHTER_DISPLACEMENT / fightersDirection.length()), 
+                                                            std::ceil(HELICOPTER_DISPLACEMENT / helicoptersDirection.length())));
 
         Vec2d fighterSolution;
         Vec2d helicopterSolution;
 
         for (int i = 1; i < maxIterations; ++i)
         {
-            Vec2d proposedFighterSolution = fightersSpeed * i;
-            Rect  proposedFighterRect     = fighters.m_rect + proposedFighterSolution;
+            Vec2d proposedFighterSolution = fightersDirection * i;
+            Rect  proposedFighterRect     = safeFightersRect + proposedFighterSolution;
 
-            if (state().isCorrectPosition(proposedFighterRect) && !proposedFighterRect.overlaps(helicopters.m_rect))
+            if (state().isCorrectPosition(proposedFighterRect) && !proposedFighterRect.overlaps(safeHelicoptersRect))
             {
                 fighterSolution = proposedFighterSolution;
                 break;
             }
 
-            Vec2d proposedHelicopterSolution = helicoptersSpeed * i;
-            Rect  proposedHelicoptersRect = helicopters.m_rect + proposedHelicopterSolution;
-            if (state().isCorrectPosition(proposedHelicoptersRect) && !fighters.m_rect.overlaps(proposedHelicoptersRect))
+            Vec2d proposedHelicopterSolution = helicoptersDirection * i;
+            Rect  proposedHelicoptersRect = safeHelicoptersRect + proposedHelicopterSolution;
+            if (state().isCorrectPosition(proposedHelicoptersRect) && !safeFightersRect.overlaps(proposedHelicoptersRect))
             {
                 helicopterSolution = proposedHelicopterSolution;
                 break;
@@ -157,12 +160,12 @@ bool GoalDefendTank::shiftAircraft()
     std::copy_if(std::begin(solutions), std::end(solutions), std::back_inserter(correctSolutons), 
         [this, &fighters, &helicopters, &tanks](const Point& proposed)
     {
-        Point dxdy = proposed - fighters.m_center;
-        Rect  proposedRect = fighters.m_rect + dxdy;
+        Vec2d displacement = proposed - fighters.m_center;
+        Rect  proposedRect = fighters.m_rect + displacement;
 
         return state().isCorrectPosition(proposedRect) 
             && fighters.isPathFree(proposed, Obstacle(helicopters), m_helicopterIteration)
-            && helicopters.isPathFree(tanks.m_center, Obstacle(fighters), m_helicopterIteration);
+            && helicopters.isPathFree(tanks.m_center, Obstacle(VehicleGroupGhost(fighters, displacement)), m_helicopterIteration);
     });
 
     // sort by distance to tank (less priority) then by distance to enemy helicopters, then by distance to fighters (most priority)
