@@ -84,4 +84,12 @@ public:
         double cosine = dot(a, b) / a.length() / b.length();
         return std::acos(cosine);
     }
+
+    bool operator==(const Vec2d& right) const 
+    { 
+        static const double k_epsilon = 0.00001;
+        return std::abs(m_x - right.m_x) < k_epsilon && std::abs(m_y - right.m_y) < k_epsilon;
+    }
+
+    bool operator!=(const Vec2d& right) const { return !this->operator==(right); }
 };

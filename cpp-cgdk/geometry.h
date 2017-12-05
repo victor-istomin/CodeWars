@@ -21,6 +21,7 @@ struct Point
     Point(const model::Unit& unit)                                : m_x(unit.getX()), m_y(unit.getY()) {}
 
     Point& operator+=(const Point& right)                         { m_x += right.m_x; m_y += right.m_y; return *this; }
+    Point& operator+=(const Vec2d& right)                         { return (*this += right.toPoint<Point>()); }
     Point& operator-=(const Point& right)                         { m_x -= right.m_x; m_y -= right.m_y; return *this; }
     Point& operator/=(double divider)                             { m_x /= divider;   m_y /= divider;   return *this; }
     Point& operator*=(double multiplier)                          { m_x *= multiplier; m_y *= multiplier; return *this; }

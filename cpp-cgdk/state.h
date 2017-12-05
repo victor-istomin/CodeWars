@@ -24,7 +24,6 @@ class State
 public:
     typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
     typedef std::map<Id, VehiclePtr>                      VehicleByID;
-    typedef std::unordered_map<Id, Vec2d>                 SpeedById;
     typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;
     typedef std::vector<Id>                               IdList;
 
@@ -45,7 +44,6 @@ public:
 private:
 
     VehicleByID   m_vehicles;
-    SpeedById     m_vehicleSpeed;
     IdList        m_selection;
     GroupByType   m_alliens;
     GroupByType   m_teammates;
@@ -54,7 +52,7 @@ private:
     Rect m_teammatesRect;
     Rect m_alliensRect;
 
-    const VehicleGroup* m_nuclearGuide;
+    const VehicleGroup* m_nuclearGuideGroup;
 
     const model::World*  m_world;
     const model::Player* m_player;
@@ -79,7 +77,9 @@ private:
         };
 
         typedef std::map<model::TerrainType, double> GroundVisibility;
+        typedef std::map<model::TerrainType, double> GroundMobility;
         typedef std::map<model::WeatherType, double> AirVisibility;
+        typedef std::map<model::WeatherType, double> AirMobility;
         typedef std::map<model::VehicleType, double> UnitVisionRadius;
 
         typedef std::remove_reference_t<decltype(static_cast<model::World*>(nullptr)->getTerrainByCellXY())> TerrainCells;
@@ -87,25 +87,32 @@ private:
 
         double           m_helicoprerRadius;
         GroundVisibility m_groundVisibility;
+        GroundMobility   m_groundMobility;
         AirVisibility    m_airVisibility;
+        AirMobility      m_airMobility;
         UnitVisionRadius m_unitVision;
         TerrainCells     m_terrain;
         WeatherCells     m_weather;
         const PointInt   m_tileSize;
 
-        PointInt getTileIndex(const model::Vehicle& v) const;
+        PointInt getTileIndex(const Point& p) const;
         model::WeatherType getWeather(const PointInt& tile) const;
         model::TerrainType getTerrain(const PointInt& tile) const;
 
         double getMaxVisionRange(model::VehicleType type) const;
         double getVisionFactor(model::WeatherType weather) const;
         double getVisionFactor(model::TerrainType terrain) const;
+        double getMobilityFactor(model::WeatherType weather) const;
+        double getMobilityFactor(model::TerrainType terrain) const;
 
         Constants(double helicopterRadius, const PointInt& tileSize, 
-                  GroundVisibility&& groundVisibility, AirVisibility&& airVisibility, UnitVisionRadius&& unitVision,
+                  GroundVisibility&& groundVisibility, GroundMobility&& groundMobility,
+                  AirVisibility&& airVisibility, AirMobility&& airMobility, 
+                  UnitVisionRadius&& unitVision,
                   const TerrainCells& terrain, const WeatherCells& weather)
             : m_helicoprerRadius(helicopterRadius), m_tileSize(tileSize)
-            , m_groundVisibility(groundVisibility), m_airVisibility(airVisibility)
+            , m_groundVisibility(groundVisibility), m_groundMobility(groundMobility)
+            , m_airVisibility(airVisibility), m_airMobility(airMobility)
             , m_unitVision(unitVision), m_terrain(terrain), m_weather(weather)
         {}
     };
@@ -125,7 +132,7 @@ public:
     };
 
     State() : m_world(nullptr), m_game(nullptr), m_move(nullptr), m_player(nullptr)
-            , m_isMoveCommitted(false), m_nuclearGuide(nullptr) 
+            , m_isMoveCommitted(false), m_nuclearGuideGroup(nullptr) 
     {}
 
     Constants& constants() { return *m_constants; }
@@ -141,19 +148,22 @@ public:
     const model::Game*   game()     const { return m_game; };
 
     const EnemyStrategyStats& enemyStrategy() const              { return m_enemyStats; }
-    const VehicleGroup*       nuclearGuide() const               { return m_nuclearGuide; }
-    Point nuclearMissileTarget() const                           { return m_nuclearGuide ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
 
 	const GroupByType&  teammates() const                        { return m_teammates; }
 	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
 	const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
+
+    const VehicleGroup* nuclearGuideGroup() const                { return m_nuclearGuideGroup; }
+    Point nuclearMissileTarget() const                           { return m_nuclearGuideGroup ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
 
     bool isMoveCommitted() const                                 { return m_isMoveCommitted; }
     bool hasActionPoint() const                                  { return player()->getRemainingActionCooldownTicks() == 0; }
     bool isCorrectPosition(const Point& p) const                 { return p.m_x >= 0 && p.m_y >= 0 && p.m_x <= m_game->getWorldWidth() && p.m_y <= m_game->getWorldHeight();}
     bool isCorrectPosition(const Rect& r) const                  { return isCorrectPosition(r.m_topLeft) && isCorrectPosition(r.m_bottomRight); }
 
-    double getUnitVisionRange(const model::Vehicle& v) const;
+    double getUnitVisionRange(const model::Vehicle& v) const     { return getUnitVisionRangeAt(v, v); }
+    double getUnitVisionRangeAt(const model::Vehicle& v, const Point& pos) const;
+    double getUnitSpeedAt(const model::Vehicle& v, const Point& pos) const;
 
     bool isEnemyCoveredByAnother(model::VehicleType groupId, VehicleGroup& mergedGroups) const;
 
