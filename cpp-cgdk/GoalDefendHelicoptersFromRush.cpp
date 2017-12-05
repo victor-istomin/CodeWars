@@ -5,7 +5,7 @@
 #include <cmath>
 #include <typeinfo>
 
-#include "goalDefendHelicopter.h"
+#include "goalDefendHelicoptersFromRush.h"
 #include "GoalMixTanksAndHealers.h"
 #include "goalUtils.h"
 #include "goalManager.h"
@@ -21,7 +21,7 @@ using namespace goals;
 using namespace model;
 
 
-bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackTarget)
+bool DefendHelicoptersFromRush::doAttack(Callback shouldAbort, Callback shouldProceed, const VehicleGroup& attackTarget)
 {
     const VehicleGroup& attackWith = fighterGroup();
     if (attackWith.m_units.empty() || attackTarget.m_units.empty())
@@ -37,21 +37,25 @@ bool DefendHelicopters::doAttack(Callback shouldAbort, Callback shouldProceed, c
     VehiclePtr firstUnit = attackWith.m_units.front().lock();
     int nTicksGap = std::max(MIN_TICKS_GAP, static_cast<int>(path.length() / firstUnit->getMaxSpeed() / 4));
 
-    pushBackStep(shouldAbort, WaitSomeTicks{ nTicksGap }, DoNothing(), "wait next attack", StepType::ALLOW_MULTITASK);
+    pushBackStep(shouldAbort, WaitSomeTicks { state(), nTicksGap }, DoNothing(), "wait next attack", StepType::ALLOW_MULTITASK);
     
-    pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicopters::doAttack, this, shouldAbort, shouldProceed, std::cref(attackTarget)), 
+    pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicoptersFromRush::doAttack, this, shouldAbort, shouldProceed, std::cref(attackTarget)), 
         "attack again", StepType::ALLOW_MULTITASK);
 
     return true;
 }
 
-bool DefendHelicopters::abortCheck()
+bool DefendHelicoptersFromRush::abortCheck()
 {
+    const int tickIndex = state().world()->getTickIndex();
+
     bool isFightersBeaten = state().alliens(VehicleType::FIGHTER).m_healthSum < (state().teammates(VehicleType::HELICOPTER).m_healthSum * MIN_HEALTH_FACTOR);
-    return state().world()->getTickIndex() > MAX_DEFEND_TICK || isFightersBeaten;
+    bool isNoRush         = tickIndex > DEFEND_DECISION_TICK && !state().enemyStrategy().isAirRush();
+    
+    return tickIndex > MAX_DEFEND_TICK || isFightersBeaten || isNoRush;
 }
 
-DefendHelicopters::DefendHelicopters(State& state, GoalManager& goalManager)
+DefendHelicoptersFromRush::DefendHelicoptersFromRush(State& state, GoalManager& goalManager)
     : Goal(state, goalManager)
     , m_helicopterIteration(std::min(state.constants().m_helicoprerRadius, state.game()->getHelicopterSpeed()) / 2)
 {
@@ -122,12 +126,12 @@ DefendHelicopters::DefendHelicopters(State& state, GoalManager& goalManager)
     // TODO: add next goal - terrorize enemy with nukes aimed by aircraft
 }
 
-bool DefendHelicopters::isCompatibleWith(const Goal* interrupted)
+bool DefendHelicoptersFromRush::isCompatibleWith(const Goal* interrupted)
 {
 	return typeid(*interrupted) == typeid(MixTanksAndHealers) || isAboutToAbort();
 }
 
-Point DefendHelicopters::getActualIfvCoverPos()
+Point DefendHelicoptersFromRush::getActualIfvCoverPos()
 {
     if (m_ifvCoverPos == Point())
     {
@@ -147,12 +151,12 @@ Point DefendHelicopters::getActualIfvCoverPos()
 }
 
 
-bool DefendHelicopters::isPathToIfvFree()
+bool DefendHelicoptersFromRush::isPathToIfvFree()
 {
 	return helicopterGroup().isPathFree(getActualIfvCoverPos(), Obstacle(fighterGroup()), m_helicopterIteration);
 }
 
-bool DefendHelicopters::shiftAircraftAway()
+bool DefendHelicoptersFromRush::shiftAircraftAway()
 {
 	if (isPathToIfvFree())
 		return true;  // nothing to move
@@ -232,7 +236,7 @@ bool DefendHelicopters::shiftAircraftAway()
 
 }
 
-bool DefendHelicopters::prepareCoverByAircraft()
+bool DefendHelicoptersFromRush::prepareCoverByAircraft()
 {
 	const VehicleGroup& fighters = fighterGroup();
 	const VehicleGroup& helicopters = helicopterGroup();
@@ -291,7 +295,7 @@ bool DefendHelicopters::prepareCoverByAircraft()
 }
 
 
-Point DefendHelicopters::getAircraftBypassPoint(const VehicleGroup& fighters, const VehicleGroup& helicopters, Point defendDestination)
+Point DefendHelicoptersFromRush::getAircraftBypassPoint(const VehicleGroup& fighters, const VehicleGroup& helicopters, Point defendDestination)
 {
 	const double near = 1.4;
 	const double far = 2.8;
@@ -326,7 +330,7 @@ Point DefendHelicopters::getAircraftBypassPoint(const VehicleGroup& fighters, co
 	return solutionIt != std::end(solutions) ? *solutionIt : Point();
 }
 
-Point DefendHelicopters::getFightersTargetPoint(const VehicleGroup& mainTarget, const VehicleGroup& attackWith)
+Point DefendHelicoptersFromRush::getFightersTargetPoint(const VehicleGroup& mainTarget, const VehicleGroup& attackWith)
 {
     std::vector<Point> attackPoints;
     attackPoints.reserve(mainTarget.m_units.size());

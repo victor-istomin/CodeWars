@@ -1,4 +1,13 @@
 #include "state.h"
+#include <cmath>
+
+using namespace model;   // TODO: cleanup
+
+const float State::EnemyStrategyStats::MAX_SCORE         = 1.0;
+const float State::EnemyStrategyStats::POSITIVE_SCORE    = 0.5 * MAX_SCORE;
+const float State::EnemyStrategyStats::INCREMENT_DIVIDER = 2.0;
+const float State::EnemyStrategyStats::INCREMENT         = MAX_SCORE / INCREMENT_DIVIDER;   // so, limit will be MAX_SCORE
+
 
 void State::update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)
 {
@@ -20,6 +29,7 @@ void State::update(const model::World& world, const model::Player& me, const mod
 
     updateNuclearGuide();
 
+    updateEnemyStats();
 }
 
 void State::updateGroups()
@@ -55,9 +65,80 @@ void State::updateVehicles()
     }
 }
 
+void State::updateEnemyStats()
+{
+	const Point myBase = { 100, 100 };
+
+	static const VehicleType s_groundUnits[] = { VehicleType::ARRV, VehicleType::TANK, VehicleType::IFV };
+	static const VehicleType s_allUnits[]    = { VehicleType::ARRV, VehicleType::TANK, VehicleType::IFV , VehicleType::FIGHTER, VehicleType::HELICOPTER };
+
+	static const int MAX_START_PHASE_TICKS = 3000; // QuickStart guy arrives at ~500 tick, so this looks enough for start
+	auto notExistent = [this](VehicleType type) { return m_alliens.find(type) == m_alliens.end(); };
+
+    bool isStartPhase = world()->getTickIndex() < MAX_START_PHASE_TICKS
+        && std::find_if(std::begin(s_allUnits), std::end(s_allUnits), notExistent) == std::end(s_allUnits);
+
+	if (isStartPhase)
+	{
+        // --- decay old scores
+
+        m_enemyStats.m_startedWithAirRush  /= EnemyStrategyStats::INCREMENT_DIVIDER;
+        m_enemyStats.m_startedWithSlowHeap /= EnemyStrategyStats::INCREMENT_DIVIDER;
+
+		// --- detect whether aircraft rushes me ahead of other enemy troops 
+
+		const VehicleGroup& enemyFighters    = alliens(VehicleType::FIGHTER);
+		const VehicleGroup& enemyHelicopters = alliens(VehicleType::HELICOPTER);
+		const Point&        fightersCenter   = enemyFighters.m_center;
+
+		// TODO: detect nuking by 1-2 aircrafts
+
+		const double nearestAirEnemydistanceSq = std::min(myBase.getSquareDistance(fightersCenter), myBase.getSquareDistance(enemyHelicopters.m_center));
+
+		auto isAheadOfAircraft = [this, &myBase, &nearestAirEnemydistanceSq](VehicleType type) { return myBase.getSquareDistance(alliens(type).m_center) < nearestAirEnemydistanceSq; };
+		bool isAircraftAhead   = std::find_if(std::begin(s_groundUnits), std::end(s_groundUnits), isAheadOfAircraft) == std::end(s_groundUnits);
+
+		if (isAircraftAhead)
+		{
+			double aircraftGap = std::numeric_limits<double>::max();
+			for (VehicleType groundType : s_groundUnits)
+				aircraftGap = std::min(aircraftGap, fightersCenter.getDistanceTo(alliens(groundType).m_center));
+
+			const double s_stillTogetherDistance = std::hypot(enemyFighters.m_rect.height(), enemyFighters.m_rect.width());
+			isAircraftAhead = aircraftGap > s_stillTogetherDistance;
+		}
+
+		if (isAircraftAhead)
+		{
+			m_enemyStats.m_startedWithAirRush += EnemyStrategyStats::INCREMENT;   // limit is MAX_SCORE
+		}
+
+		// --- detect "slow heap" strategy
+        static const size_t k_unitTypes = std::extent<decltype(s_allUnits)>::value;
+
+        size_t intersections = 0;
+        for(size_t i = 0; i < k_unitTypes; ++i)
+        { 
+            const Rect& groupRect = alliens(s_allUnits[i]).m_rect;
+            for (size_t j = i + 1; j < k_unitTypes; ++j)
+            {
+                const Rect& otherRect = alliens(s_allUnits[j]).m_rect;
+                if (groupRect.overlaps(otherRect))
+                    ++intersections;
+            };            
+        }
+
+        static const size_t k_minIntersectionsInHeap = k_unitTypes - 1;  // all groups intersects with one neighbor
+        if (intersections >= k_minIntersectionsInHeap)
+        {
+            m_enemyStats.m_startedWithSlowHeap += EnemyStrategyStats::INCREMENT;
+        }
+	}
+}
+
 void State::updateNuclearGuide()
 {
-    m_nuclearGuide = nullptr;
+    m_nuclearGuideGroup = nullptr;
     if (m_player->getNextNuclearStrikeTickIndex() != -1)
     {
         Id guideId = m_player->getNextNuclearStrikeVehicleId();
@@ -65,7 +146,7 @@ void State::updateNuclearGuide()
         VehiclePtr guideUnit = m_vehicles[guideId];
 
         if (guideUnit)
-            m_nuclearGuide = &teammates(guideUnit->getType());
+            m_nuclearGuideGroup = &teammates(guideUnit->getType());
     }
 }
 
@@ -105,10 +186,20 @@ void State::initConstants()
             { model::TerrainType::PLAIN,  m_game->getPlainTerrainVisionFactor() },
             { model::TerrainType::SWAMP,  m_game->getSwampTerrainVisionFactor() }
         },
+        Constants::GroundMobility{
+            { model::TerrainType::FOREST, m_game->getForestTerrainSpeedFactor() },
+            { model::TerrainType::PLAIN,  m_game->getPlainTerrainSpeedFactor() },
+            { model::TerrainType::SWAMP,  m_game->getSwampTerrainSpeedFactor() }
+        },
         Constants::AirVisibility{
             { model::WeatherType::CLEAR, m_game->getClearWeatherVisionFactor() },
             { model::WeatherType::CLOUD, m_game->getCloudWeatherVisionFactor() },
             { model::WeatherType::RAIN,  m_game->getRainWeatherVisionFactor() }
+        },
+        Constants::AirMobility{
+            { model::WeatherType::CLEAR, m_game->getClearWeatherSpeedFactor() },
+            { model::WeatherType::CLOUD, m_game->getCloudWeatherSpeedFactor() },
+            { model::WeatherType::RAIN,  m_game->getRainWeatherSpeedFactor() }
         },
         Constants::UnitVisionRadius{
             { model::VehicleType::ARRV,       m_game->getArrvVisionRange()},
@@ -254,9 +345,9 @@ void State::setScaleAction(double factor, const Point& center)
 	m_isMoveCommitted = true;
 }
 
-State::Constants::PointInt State::Constants::getTileIndex(const model::Vehicle& v) const
+State::Constants::PointInt State::Constants::getTileIndex(const Point& p) const
 {
-    return PointInt(static_cast<int>(v.getX()) / m_tileSize.m_x, static_cast<int>(v.getY()) / m_tileSize.m_y);
+    return PointInt(static_cast<int>(p.m_x) / m_tileSize.m_x, static_cast<int>(p.m_y) / m_tileSize.m_y);
 }
 
 model::WeatherType State::Constants::getWeather(const PointInt& tile) const
@@ -288,12 +379,41 @@ double State::Constants::getVisionFactor(model::TerrainType terrain) const
     return found != m_groundVisibility.end() ? found->second : 1.0;
 }
 
-double State::getUnitVisionRange(const model::Vehicle& v) const
+double State::Constants::getMobilityFactor(model::WeatherType weather) const
 {
-    Constants::PointInt tile = m_constants->getTileIndex(v);
+    auto found = m_airMobility.find(weather);
+    assert(found != m_airMobility.end());
+    return found != m_airMobility.end() ? found->second : 1.0;
+}
+
+double State::Constants::getMobilityFactor(model::TerrainType terrain) const
+{
+    auto found = m_groundMobility.find(terrain);
+    assert(found != m_groundMobility.end());
+    return found != m_groundMobility.end() ? found->second : 1.0;
+}
+
+VehiclePtr State::nuclearGuideUnit() const
+{
+    Id guideId = m_player->getNextNuclearStrikeVehicleId();
+
+    auto found = m_vehicles.find(guideId);
+    return found != m_vehicles.end() ? found->second : nullptr;
+}
+
+double State::getUnitVisionRangeAt(const model::Vehicle& v, const Point& pos) const
+{
+    Constants::PointInt tile = m_constants->getTileIndex(pos);
     double initial = m_constants->getMaxVisionRange(v.getType());
     double factor = v.isAerial() ? m_constants->getVisionFactor(m_constants->getWeather(tile)) : m_constants->getVisionFactor(m_constants->getTerrain(tile));
     return initial * factor;
+}
+
+double State::getUnitSpeedAt(const model::Vehicle& v, const Point& pos) const
+{
+    Constants::PointInt tile = m_constants->getTileIndex(pos);
+    double factor = v.isAerial() ? m_constants->getMobilityFactor(m_constants->getWeather(tile)) : m_constants->getMobilityFactor(m_constants->getTerrain(tile));
+    return v.getMaxSpeed() * factor;
 }
 
 // check is this enemy group intersects with another enemy group in order to detect massive rush
@@ -345,3 +465,4 @@ double State::getDistanceToAlliensRect() const
 
 	return closestDistance;
 }
+

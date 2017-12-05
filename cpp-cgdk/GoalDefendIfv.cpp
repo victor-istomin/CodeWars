@@ -56,12 +56,12 @@ bool GoalDefendIfv::shiftAircraft()
     std::copy_if(std::begin(solutions), std::end(solutions), std::back_inserter(correctSolutons),
         [this, &fighters, &helicopters, &ifv](const Point& proposed)
     {
-        Point dxdy = proposed - fighters.m_center;
-        Rect  proposedRect = fighters.m_rect + dxdy;
+        Point displacement = proposed - fighters.m_center;
+        Rect  proposedRect = fighters.m_rect + displacement;
 
         return state().isCorrectPosition(proposedRect)
             && fighters.isPathFree(proposed, Obstacle(helicopters), m_helicopterIteration)
-            && helicopters.isPathFree(ifv.m_center, Obstacle(fighters), m_helicopterIteration);
+            && helicopters.isPathFree(ifv.m_center, Obstacle(VehicleGroupGhost(fighters, displacement)), m_helicopterIteration);
     });
 
     std::sort(correctSolutons.begin(), correctSolutons.end(), [&fighters](const Point& left, const Point& right)
