@@ -141,6 +141,8 @@ public:
     const model::Game*   game()     const { return m_game; };
 
     const EnemyStrategyStats& enemyStrategy() const              { return m_enemyStats; }
+    const VehicleGroup*       nuclearGuide() const               { return m_nuclearGuide; }
+    Point nuclearMissileTarget() const                           { return m_nuclearGuide ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
 
 	const GroupByType&  teammates() const                        { return m_teammates; }
 	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
