@@ -192,8 +192,15 @@ bool RushWithAircraft::validateMoveVector(Vec2d& moveVector)
         isMoveAllowed = nextVisionRange >= nextHighlightDistance;
     }
 
-    static const double MIN_STEP = state().game()->getFighterSpeed() / 8;
-    if (!isMoveAllowed && moveVector.length() > MIN_STEP)
+    static const double k_minStep = state().game()->getFighterSpeed() / 8;
+
+    if (isMoveAllowed)
+    {
+        static const double simulationsStep = k_minStep;
+        isMoveAllowed = fighters.isPathFree(fighters.m_center + moveVector, Obstacle(helicopterGroup()), k_minStep);
+    }
+
+    if (!isMoveAllowed && moveVector.length() > k_minStep)
     {
         // try adjust move before denying
         moveVector /= 2;

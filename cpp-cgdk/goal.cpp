@@ -85,7 +85,7 @@ bool Goal::checkNuclearLaunch()
         }
 
         static const double MIN_HEALTH = 0.5 * 100;    // TODO - remove hardcode
-        static const double MIN_DAMAGE = 32;
+        static const double MIN_DAMAGE = 90;
 
         for (const VehiclePtr& teammate : teammates)
         {
