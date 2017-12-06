@@ -7,6 +7,7 @@
 
 typedef std::shared_ptr<model::Vehicle> VehiclePtr;
 typedef std::weak_ptr<model::Vehicle>   VehicleCache;
+typedef model::VehicleType              GroupId;
 
 class Obstacle;
 

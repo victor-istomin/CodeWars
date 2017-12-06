@@ -23,6 +23,8 @@ class State
 {
 public:
     typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
+    static const Id INVALID_ID = (Id)-1;
+
     typedef std::unordered_map<Id, model::Facility>       FacilityById;
     typedef std::unordered_map<Id, VehiclePtr>            VehicleByID;
     typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;    // not eligible for unordered_map due to references to VehicleGroup's
