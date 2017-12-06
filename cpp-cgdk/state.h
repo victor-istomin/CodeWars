@@ -24,7 +24,7 @@ class State
 public:
     typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
     typedef std::unordered_map<Id, VehiclePtr>            VehicleByID;
-    typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;
+    typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;    // not eligible for unordered_map due to references to VehicleGroup's
     typedef std::vector<Id>                               IdList;
 
 	struct EnemyStrategyStats
