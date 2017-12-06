@@ -47,12 +47,9 @@ bool DefendHelicoptersFromRush::doAttack(Callback shouldAbort, Callback shouldPr
 
 bool DefendHelicoptersFromRush::abortCheck()
 {
-    const int tickIndex = state().world()->getTickIndex();
-
     bool isFightersBeaten = state().alliens(VehicleType::FIGHTER).m_healthSum < (state().teammates(VehicleType::HELICOPTER).m_healthSum * MIN_HEALTH_FACTOR);
-    bool isNoRush         = tickIndex > DEFEND_DECISION_TICK && !state().enemyStrategy().isAirRush();
-    
-    return tickIndex > MAX_DEFEND_TICK || isFightersBeaten || isNoRush;
+
+    return state().world()->getTickIndex() > MAX_DEFEND_TICK || isFightersBeaten || state().enemyDoesNotRush();
 }
 
 DefendHelicoptersFromRush::DefendHelicoptersFromRush(State& state, GoalManager& goalManager)
