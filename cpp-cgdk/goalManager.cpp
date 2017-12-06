@@ -15,9 +15,9 @@ void GoalManager::fillCurrentGoals()
     {
         m_currentGoals.emplace_back(0, std::make_unique<goals::MixTanksAndHealers>(m_state, *this));
         m_currentGoals.emplace_back(1, std::make_unique<goals::DefendHelicoptersFromRush>(m_state, *this));
-        m_currentGoals.emplace_back(3, std::make_unique<goals::GoalDefendTank>(m_state, *this));
-        m_currentGoals.emplace_back(4, std::make_unique<goals::GoalDefendIfv>(m_state, *this));
-        m_currentGoals.emplace_back(5, std::make_unique<goals::RushWithAircraft>(m_state, *this));
+        m_currentGoals.emplace_back(2, std::make_unique<goals::GoalDefendTank>(m_state, *this));
+        m_currentGoals.emplace_back(3, std::make_unique<goals::GoalDefendIfv>(m_state, *this));
+        m_currentGoals.emplace_back(4, std::make_unique<goals::RushWithAircraft>(m_state, *this));
 
         m_currentGoals.sort();
     }

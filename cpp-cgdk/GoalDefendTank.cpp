@@ -19,8 +19,10 @@ using namespace goals;
 
 bool GoalDefendTank::abortCheck() const
 {
-    int tickIndex = state().world()->getTickIndex();
+    const int tickIndex = state().world()->getTickIndex();
+
     return tickIndex > MAX_DEFEND_TICK 
+        || state().enemyDoesNotRush()
         || (isHelicoptersBeaten() && (tickIndex - m_lastAttackTick > MAX_HEAL_TICKS));
 }
 

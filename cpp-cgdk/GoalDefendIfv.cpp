@@ -7,7 +7,7 @@ using namespace goals;
 bool GoalDefendIfv::abortCheck() const
 {
     int tickIndex = state().world()->getTickIndex();
-    return tickIndex > MAX_DEFEND_TICK || isTanksBeaten();
+    return tickIndex > MAX_DEFEND_TICK || isTanksBeaten() || state().enemyDoesNotRush();
 }
 
 bool GoalDefendIfv::isTanksBeaten() const
@@ -114,8 +114,6 @@ GoalDefendIfv::GoalDefendIfv(State& strategyState, GoalManager& goalManager)
 
     pushBackStep(abortCheckFn, hasActionPointFn, [this]() { return shiftAircraft(); }, "defend ifv: shift aircraft");
     pushBackStep(abortCheckFn, canMoveHelicopters, [this]() { return moveHelicopters(); }, "defend ifv: move helicopters");
-    
-
 }
 
 

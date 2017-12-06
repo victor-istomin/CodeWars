@@ -393,6 +393,12 @@ double State::Constants::getMobilityFactor(model::TerrainType terrain) const
     return found != m_groundMobility.end() ? found->second : 1.0;
 }
 
+bool State::enemyDoesNotRush() const
+{
+    const int tickIndex = world()->getTickIndex();
+    return tickIndex > Constants::DEFEND_DESICION_TICK && !enemyStrategy().isAirRush();;
+}
+
 VehiclePtr State::nuclearGuideUnit() const
 {
     Id guideId = m_player->getNextNuclearStrikeVehicleId();

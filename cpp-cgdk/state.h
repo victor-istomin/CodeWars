@@ -22,10 +22,10 @@
 class State
 {
 public:
-    typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
-    typedef std::map<Id, VehiclePtr>                      VehicleByID;
-    typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;
-    typedef std::vector<Id>                               IdList;
+    typedef decltype(((model::Vehicle*)nullptr)->getId())        Id;
+    typedef std::unordered_map<Id, VehiclePtr>                   VehicleByID;
+    typedef std::unordered_map<model::VehicleType, VehicleGroup> GroupByType;
+    typedef std::vector<Id>                                      IdList;
 
 	struct EnemyStrategyStats
 	{
@@ -95,6 +95,8 @@ private:
         WeatherCells     m_weather;
         const PointInt   m_tileSize;
 
+        static const int DEFEND_DESICION_TICK = 500;
+
         PointInt getTileIndex(const Point& p) const;
         model::WeatherType getWeather(const PointInt& tile) const;
         model::TerrainType getTerrain(const PointInt& tile) const;
@@ -148,6 +150,7 @@ public:
     const model::Game*   game()     const { return m_game; };
 
     const EnemyStrategyStats& enemyStrategy() const              { return m_enemyStats; }
+    bool enemyDoesNotRush() const;
 
 	const GroupByType&  teammates() const                        { return m_teammates; }
 	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
