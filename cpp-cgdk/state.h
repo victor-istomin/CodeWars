@@ -22,10 +22,10 @@
 class State
 {
 public:
-    typedef decltype(((model::Vehicle*)nullptr)->getId())        Id;
-    typedef std::unordered_map<Id, VehiclePtr>                   VehicleByID;
-    typedef std::unordered_map<model::VehicleType, VehicleGroup> GroupByType;
-    typedef std::vector<Id>                                      IdList;
+    typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
+    typedef std::unordered_map<Id, VehiclePtr>            VehicleByID;
+    typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;
+    typedef std::vector<Id>                               IdList;
 
 	struct EnemyStrategyStats
 	{
