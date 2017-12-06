@@ -4,7 +4,7 @@
 #include "GoalDefendIfv.h"
 #include "GoalMixTanksAndHealers.h"
 #include "GoalRushWithAircraft.h"
-#include "GoalRushWithAircraft.h"
+#include "GoalCaptureNearFacility.h"
 #include "state.h"
 
 void GoalManager::fillCurrentGoals()
@@ -13,11 +13,17 @@ void GoalManager::fillCurrentGoals()
 
     if (m_state.world()->getTickIndex() == 0)
     {
-        m_currentGoals.emplace_back(0, std::make_unique<goals::MixTanksAndHealers>(m_state, *this));
-        m_currentGoals.emplace_back(1, std::make_unique<goals::DefendHelicoptersFromRush>(m_state, *this));
-        m_currentGoals.emplace_back(2, std::make_unique<goals::GoalDefendTank>(m_state, *this));
-        m_currentGoals.emplace_back(3, std::make_unique<goals::GoalDefendIfv>(m_state, *this));
-        m_currentGoals.emplace_back(4, std::make_unique<goals::RushWithAircraft>(m_state, *this));
+        int priority = 0;
+
+        m_currentGoals.emplace_back(priority++, std::make_unique<goals::MixTanksAndHealers>(m_state, *this));
+        m_currentGoals.emplace_back(priority++, std::make_unique<goals::DefendHelicoptersFromRush>(m_state, *this));
+        m_currentGoals.emplace_back(priority++, std::make_unique<goals::GoalDefendTank>(m_state, *this));
+        m_currentGoals.emplace_back(priority++, std::make_unique<goals::GoalDefendIfv>(m_state, *this));
+
+        if (m_state.areFacilitiesEnabled())
+            m_currentGoals.emplace_back(priority++, std::make_unique<goals::CaptureNearFacility>(m_state, *this));
+        
+        m_currentGoals.emplace_back(priority++, std::make_unique<goals::RushWithAircraft>(m_state, *this));
 
         m_currentGoals.sort();
     }

@@ -23,6 +23,7 @@ class State
 {
 public:
     typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
+    typedef std::unordered_map<Id, model::Facility>       FacilityById;
     typedef std::unordered_map<Id, VehiclePtr>            VehicleByID;
     typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;    // not eligible for unordered_map due to references to VehicleGroup's
     typedef std::vector<Id>                               IdList;
@@ -44,6 +45,7 @@ public:
 private:
 
     VehicleByID   m_vehicles;
+    FacilityById  m_facilities;
     IdList        m_selection;
     GroupByType   m_alliens;
     GroupByType   m_teammates;
@@ -124,6 +126,7 @@ private:
     void updateNuclearGuide();
     void updateVehicles();
 	void updateEnemyStats();
+    void updateFacilities();
 
 public:
 
@@ -159,6 +162,8 @@ public:
     const VehicleGroup* nuclearGuideGroup() const                { return m_nuclearGuideGroup; }
     Point nuclearMissileTarget() const                           { return m_nuclearGuideGroup ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
     VehiclePtr nuclearGuideUnit() const;
+
+    bool areFacilitiesEnabled() const                            { return !m_facilities.empty(); }
 
     bool isMoveCommitted() const                                 { return m_isMoveCommitted; }
     bool hasActionPoint() const                                  { return player()->getRemainingActionCooldownTicks() == 0; }

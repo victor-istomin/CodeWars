@@ -29,6 +29,8 @@ void State::update(const model::World& world, const model::Player& me, const mod
 
     updateNuclearGuide();
 
+    updateFacilities();
+
     updateEnemyStats();
 }
 
@@ -134,6 +136,12 @@ void State::updateEnemyStats()
             m_enemyStats.m_startedWithSlowHeap += EnemyStrategyStats::INCREMENT;
         }
 	}
+}
+
+void State::updateFacilities()
+{
+    for (const model::Facility& f : world()->getFacilities())
+        m_facilities[f.getId()] = f;
 }
 
 void State::updateNuclearGuide()
