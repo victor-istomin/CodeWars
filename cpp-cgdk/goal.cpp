@@ -74,6 +74,23 @@ bool Goal::checkNuclearLaunch()
         teammates.reserve(allVehicles.size());
         reachangeAlliens.reserve(allVehicles.size());
 
+        const model::Player& enemyPlayer = *state().enemy();
+        Point enemyNuke = state().enemyNuclearMissileTarget();
+
+        const double nukeRadius        = m_state.game()->getTacticalNuclearStrikeRadius();
+        const double maxPossibleDamage = m_state.game()->getMaxTacticalNuclearStrikeDamage();
+        const auto   myPlayerId        = m_state.player()->getId();
+        const double decaySpeed        = nukeRadius / maxPossibleDamage;
+
+        auto getDamage = [decaySpeed, maxPossibleDamage, myPlayerId](const Point& hitPoint, const model::Vehicle& unit, double teammateDamageFactor = -1.5)
+        {
+            double real   = std::max(0.0, maxPossibleDamage - (hitPoint.getDistanceTo(unit) / decaySpeed));   // TODO - check!
+            double damage = real >= unit.getDurability() ? unit.getMaxDurability() : real;
+
+            return (unit.getPlayerId() == myPlayerId ? teammateDamageFactor : 1.0) * real;
+        };
+
+
         for (const std::pair<long long, VehiclePtr>& idVehiclePair : allVehicles)
         {
             const VehiclePtr& vehicle = idVehiclePair.second;
@@ -89,7 +106,9 @@ bool Goal::checkNuclearLaunch()
 
         for (const VehiclePtr& teammate : teammates)
         {
-            if (teammate->getDurability() < MIN_HEALTH)
+            const double enemyNukeDamage = enemyNuke != Point() ? getDamage(enemyNuke, *teammate, 1.0) : 0;    // TODO - check! TODO - estimate hits from enemy between this tick and nuke arrive tick
+            const double healthThreshold = std::max(MIN_HEALTH, enemyNukeDamage);
+            if (teammate->getDurability() <= healthThreshold)
                 continue;   // teammate is about to go :(
 
             double damage = 0;
@@ -115,19 +134,6 @@ bool Goal::checkNuclearLaunch()
         static const int LOOKUP_ITEMS_LIMIT = 50;
         std::vector<DamageInfo> targets;
         targets.reserve(LOOKUP_ITEMS_LIMIT);
-
-        const double damageRadius = m_state.game()->getTacticalNuclearStrikeRadius();
-        const double maxPossibleDamage = m_state.game()->getMaxTacticalNuclearStrikeDamage();
-        const auto   myPlayerId = m_state.player()->getId();
-
-        auto getDamage = [damageRadius, maxPossibleDamage, myPlayerId](const Point& hitPoint, const model::Vehicle& enemy)
-        {
-            double decay = damageRadius / maxPossibleDamage;
-            double real = std::max(0.0, maxPossibleDamage - (hitPoint.getDistanceTo(enemy) / decay));   // TODO - check!
-            double damage = real >= enemy.getDurability() ? enemy.getMaxDurability() : real;
-
-            return (enemy.getPlayerId() == myPlayerId ? -1.5 : 1.0) * real;
-        };
 
         int lookupItemsLeft = LOOKUP_ITEMS_LIMIT;
         for (auto itDamage = nukeDamageMap.rbegin(); itDamage != nukeDamageMap.rend() && lookupItemsLeft > 0; ++itDamage, --lookupItemsLeft)

@@ -56,6 +56,7 @@ private:
 
     const model::World*  m_world;
     const model::Player* m_player;
+    const model::Player* m_enemy;
     const model::Game*   m_game;
     model::Move*         m_move;
 
@@ -147,6 +148,7 @@ public:
 
     const model::World*  world()    const { return m_world; };
     const model::Player* player()   const { return m_player; };
+    const model::Player* enemy()    const { return m_enemy; };
     const model::Game*   game()     const { return m_game; };
 
     const EnemyStrategyStats& enemyStrategy() const              { return m_enemyStats; }
@@ -158,6 +160,7 @@ public:
 
     const VehicleGroup* nuclearGuideGroup() const                { return m_nuclearGuideGroup; }
     Point nuclearMissileTarget() const                           { return m_nuclearGuideGroup ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
+	Point enemyNuclearMissileTarget() const                      { return m_enemy->getNextNuclearStrikeTickIndex() != -1 ? Point(m_enemy->getNextNuclearStrikeX(), m_enemy->getNextNuclearStrikeY()) : Point(); }
     VehiclePtr nuclearGuideUnit() const;
 
     bool isMoveCommitted() const                                 { return m_isMoveCommitted; }

@@ -16,6 +16,7 @@ void State::update(const model::World& world, const model::Player& me, const mod
 	m_player = &me;
 	m_game   = &game;
 	m_move   = &move;
+	m_enemy  = & (*std::find_if(world.getPlayers().begin(), world.getPlayers().end(), [](const Player& p) { return !p.isMe(); }));
 
     initConstants();
 
