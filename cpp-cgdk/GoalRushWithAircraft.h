@@ -33,6 +33,8 @@ namespace goals
         bool validateMoveVector(Vec2d& moveVector);
         TargetInfo getFightersTargetInfo();
 
+        virtual bool isCompatibleWith(const Goal* interrupted) override;
+
     public:
         RushWithAircraft(State& state, GoalManager& goalManager);
         ~RushWithAircraft();

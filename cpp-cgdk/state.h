@@ -15,6 +15,7 @@
 #include "model/Move.h"
 #include "model/ActionType.h"
 #include "model/Game.h"
+#include "model/Facility.h"
 
 #include "geometry.h"
 #include "VehicleGroup.h"
@@ -166,6 +167,8 @@ public:
     VehiclePtr nuclearGuideUnit() const;
 
     bool areFacilitiesEnabled() const                            { return !m_facilities.empty(); }
+    const FacilityById&    facilities() const                    { return m_facilities; }
+    const model::Facility* facility(Id id) const                 { auto found = m_facilities.find(id); return found != m_facilities.end() ? &found->second : nullptr; }
 
     bool isMoveCommitted() const                                 { return m_isMoveCommitted; }
     bool hasActionPoint() const                                  { return player()->getRemainingActionCooldownTicks() == 0; }

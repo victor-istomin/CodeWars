@@ -10,14 +10,17 @@ namespace goals
     class CaptureNearFacility 
         : public Goal
     {
-        typedef std::list<GroupId>                      GroupsList;
+        typedef std::list<GroupId> GroupsList;
 
-//         typedef std::unordered_map<GroupId, State::Id>  GroupTargets;
-//         GroupTargets m_targets;
+        static const int ID_NONE = -1;
 
-        bool       isActiveMode();          // active mode: 1 group - 1 target, instead: N groups - 1 target
+        typedef std::unordered_map<GroupId, State::Id>  GroupTargets;
+        GroupTargets m_actualTargets;
+
         GroupsList getGroupsForCapture();
         State::Id  getNearestFacility(const VehicleGroup& teammates);
+
+        Point getFacilityCenter(const model::Facility* facility);
 
         bool shouldAbort() const        { return false; }
         bool hasActionPoints() const    { return state().hasActionPoint(); }
@@ -26,6 +29,8 @@ namespace goals
 
         bool startCapture();
         bool performCapture(GroupId performer, State::Id facilityId);
+
+        void selectMixedGroups(const VehicleGroup &performer);
 
     public:
         CaptureNearFacility(State& state, GoalManager& goalManager);

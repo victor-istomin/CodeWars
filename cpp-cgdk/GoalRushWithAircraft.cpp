@@ -2,6 +2,7 @@
 #include <algorithm>
 
 #include "GoalRushWithAircraft.h"
+#include "GoalCaptureNearFacility.h"
 #include "goalUtils.h"
 #include "noReleaseAssert.h"
 
@@ -17,7 +18,8 @@ RushWithAircraft::RushWithAircraft(State& worldState, GoalManager& goalManager)
     pushBackStep([this]() { return shouldAbort(); },
                  [this]() { return state().hasActionPoint(); },
                  [this]() { return doNextFightersMove(); },
-                 "rush air: first fighters step");
+                 "rush air: first fighters step",
+                 StepType::ALLOW_MULTITASK);
 }
 
 
@@ -101,7 +103,7 @@ bool RushWithAircraft::doNextFightersMove()
     pushNextStep([this]() { return shouldAbort(); },
                  [this]() { return state().hasActionPoint(); },
                  [this]() { return doNextFightersMove(); },
-                 "doNextFightersMove");
+                 "doNextFightersMove", StepType::ALLOW_MULTITASK);
 
     pushNextStep([this]() { return shouldAbort(); }, WaitSomeTicks{ state(), ticksToWait }, DoNothing(), "wait next step", StepType::ALLOW_MULTITASK);
 
@@ -208,4 +210,9 @@ bool RushWithAircraft::validateMoveVector(Vec2d& moveVector)
     }
 
     return isMoveAllowed;
+}
+
+bool RushWithAircraft::isCompatibleWith(const Goal* interrupted)
+{
+    return dynamic_cast<const CaptureNearFacility*>(interrupted) != nullptr;
 }
