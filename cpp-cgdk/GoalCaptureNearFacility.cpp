@@ -11,6 +11,8 @@ CaptureNearFacility::CaptureNearFacility(State& worldState, GoalManager& goalMan
     pushBackStep([this]() {return shouldAbort(); }, WaitUntilStops(ifvGroup()), DoNothing(), "wait until IFV stops", StepType::ALLOW_MULTITASK);
     pushBackStep([this]() {return shouldAbort(); }, WaitUntilStops(arrvGroup()), DoNothing(), "wait until arrv stops", StepType::ALLOW_MULTITASK);
 
+    pushBackStep([this]() { return shouldAbort(); }, [this]() { return hasActionPoints(); }, [this]() { return createMixedGroup(); }, "assign group #");
+
     pushBackStep([this]() { return shouldAbort(); }, [this]() { return hasActionPoints(); }, [this]() { return startCapture(); }, "start capturing");
 }
 
@@ -74,10 +76,10 @@ bool CaptureNearFacility::performCapture(GroupId performerId, State::Id facility
 {
     const VehicleGroup& performer = state().teammates(performerId);
 
-    selectMixedGroups(performer);
-
     const Facility* facility = state().facility(facilityId);
     Vec2d moveVector = getFacilityCenter(facility) - performer.m_center;
+
+    state().setSelectAction(State::GROUP_CAPTURING);
 
     if (moveVector.length() > 1)
     {
@@ -90,10 +92,8 @@ bool CaptureNearFacility::performCapture(GroupId performerId, State::Id facility
         pushNextStep([this]() {return shouldAbort(); }, WaitUntilStops(arrvGroup()), DoNothing(), "wait until arrv stops", StepType::ALLOW_MULTITASK);
 
         pushNextStep([this]() {return shouldAbort(); },
-            [this]() {return hasActionPoints(); },
-            [this, moveVector]() { state().setMoveAction(moveVector); return true; }, "capture move");
-
-        selectMixedGroups(performer);
+                     [this]() {return hasActionPoints(); },
+                     [this, moveVector]() { state().setMoveAction(moveVector); return true; }, "capture move");
     }
     else
     {
@@ -104,12 +104,22 @@ bool CaptureNearFacility::performCapture(GroupId performerId, State::Id facility
     return true;
 }
 
-void CaptureNearFacility::selectMixedGroups(const VehicleGroup& performer)
+Point CaptureNearFacility::getFacilityCenter(const model::Facility* facility)
 {
+    static const Point centerDisplacement = { state().game()->getFacilityWidth() / 2, state().game()->getFacilityHeight() / 2 };
+    Point center = Point(facility->getLeft(), facility->getTop()) + centerDisplacement;
+
+    return center;
+}
+
+bool CaptureNearFacility::createMixedGroup()
+{
+    const VehicleGroup& performer = tankGroup();
+
     Rect selectionRect = performer.m_rect;
     for (const auto& idGroupPair : state().teammates())
     {
-        const auto&         id    = idGroupPair.first;
+        const auto&         id = idGroupPair.first;
         const VehicleGroup& group = idGroupPair.second;
 
         if (id == VehicleType::FIGHTER || id == VehicleType::HELICOPTER)    // aerials have their own goal
@@ -119,8 +129,12 @@ void CaptureNearFacility::selectMixedGroups(const VehicleGroup& performer)
             selectionRect.ensureContains(group.m_rect);
     }
 
-    state().setSelectAction(selectionRect, VehicleType::TANK);
-    
+    // LIFO pushing order: select tanks, add IFV, add ARRV and then assign group number
+
+    pushNextStep([this]() {return shouldAbort(); },
+                 [this]() {return hasActionPoints(); },
+                 [this]() {state().setAssignGroupAction(State::GROUP_CAPTURING); return true; }, "create capturing group");
+
     pushNextStep([this]() {return shouldAbort(); },
                  [this]() {return hasActionPoints(); },
                  [this, selectionRect]() { state().setAddSelectionAction(selectionRect, VehicleType::ARRV); return true; }, "add arrv to selection");
@@ -129,12 +143,7 @@ void CaptureNearFacility::selectMixedGroups(const VehicleGroup& performer)
                  [this]() {return hasActionPoints(); },
                  [this, selectionRect]() { state().setAddSelectionAction(selectionRect, VehicleType::IFV); return true; }, "add IFV to selection");
 
-}
+    state().setSelectAction(selectionRect, VehicleType::TANK);
 
-Point goals::CaptureNearFacility::getFacilityCenter(const model::Facility* facility)
-{
-    static const Point centerDisplacement = { state().game()->getFacilityWidth() / 2, state().game()->getFacilityHeight() / 2 };
-    Point center = Point(facility->getLeft(), facility->getTop()) + centerDisplacement;
-
-    return center;
+    return true;
 }

@@ -137,6 +137,7 @@ public:
     enum
     {
         GROUP_ARRV_EVEN = 1,
+        GROUP_CAPTURING,
     };
 
     State() : m_world(nullptr), m_game(nullptr), m_move(nullptr), m_player(nullptr)

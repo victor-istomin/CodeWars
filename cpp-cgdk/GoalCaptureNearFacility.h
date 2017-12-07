@@ -27,10 +27,9 @@ namespace goals
 
         // actions
 
+        bool createMixedGroup();
         bool startCapture();
         bool performCapture(GroupId performer, State::Id facilityId);
-
-        void selectMixedGroups(const VehicleGroup &performer);
 
     public:
         CaptureNearFacility(State& state, GoalManager& goalManager);
