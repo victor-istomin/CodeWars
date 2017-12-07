@@ -76,6 +76,7 @@ bool Goal::checkNuclearLaunch()
 
         const model::Player& enemyPlayer = *state().enemy();
         Point enemyNuke = state().enemyNuclearMissileTarget();
+        int   ticksToEnemyNuke = enemyPlayer.getNextNuclearStrikeTickIndex() != -1 ? enemyPlayer.getNextNuclearStrikeTickIndex() - state().world()->getTickIndex() : 0;
 
         const double nukeRadius        = m_state.game()->getTacticalNuclearStrikeRadius();
         const double maxPossibleDamage = m_state.game()->getMaxTacticalNuclearStrikeDamage();
@@ -106,7 +107,7 @@ bool Goal::checkNuclearLaunch()
 
         for (const VehiclePtr& teammate : teammates)
         {
-            const double enemyNukeDamage = enemyNuke != Point() ? getDamage(enemyNuke, *teammate, 1.0) : 0;    // TODO - check! TODO - estimate hits from enemy between this tick and nuke arrive tick
+            const double enemyNukeDamage = enemyNuke != Point() ? getDamage(enemyNuke, *teammate, 1.0) + ticksToEnemyNuke / 2 : 0;
             const double healthThreshold = std::max(MIN_HEALTH, enemyNukeDamage);
             if (teammate->getDurability() <= healthThreshold)
                 continue;   // teammate is about to go :(
