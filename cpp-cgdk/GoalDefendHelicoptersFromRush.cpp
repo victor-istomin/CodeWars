@@ -118,7 +118,7 @@ DefendHelicoptersFromRush::DefendHelicoptersFromRush(State& state, GoalManager& 
         return isNear(fighterGroup(), allienFighters(), 5 * fighterGroup().m_rect.width());
     };
 
-	pushBackStep(abortCheckFn, shouldStartAttack, doAttackFighters, "fighter: start attacking enemy fighters");
+    pushBackStep(abortCheckFn, shouldStartAttack, doAttackFighters, "fighter: start attacking enemy fighters", StepType::ALLOW_MULTITASK);
 
     // TODO: add next goal - terrorize enemy with nukes aimed by aircraft
 }
