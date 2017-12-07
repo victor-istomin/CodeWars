@@ -5,6 +5,7 @@
 #include "GoalMixTanksAndHealers.h"
 #include "GoalRushWithAircraft.h"
 #include "GoalCaptureNearFacility.h"
+#include "GoalDefendCapturers.h"
 #include "state.h"
 
 void GoalManager::fillCurrentGoals()
@@ -21,7 +22,10 @@ void GoalManager::fillCurrentGoals()
         m_currentGoals.emplace_back(priority++, std::make_unique<goals::GoalDefendIfv>(m_state, *this));
 
         if (m_state.areFacilitiesEnabled())
+        {
             m_currentGoals.emplace_back(priority++, std::make_unique<goals::CaptureNearFacility>(m_state, *this));
+            m_currentGoals.emplace_back(priority++, std::make_unique<goals::DefendCapturers>(m_state, *this));
+        }
         
         m_currentGoals.emplace_back(priority++, std::make_unique<goals::RushWithAircraft>(m_state, *this));
 
