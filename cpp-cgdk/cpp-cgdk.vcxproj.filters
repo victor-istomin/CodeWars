@@ -111,6 +111,12 @@
     <ClCompile Include="GoalRushWithAircraft.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GoalCaptureNearFacility.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GoalDefendCapturers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyStrategy.h">
@@ -225,6 +231,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GoalRushWithAircraft.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalCaptureNearFacility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalDefendCapturers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

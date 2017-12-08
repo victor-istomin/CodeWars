@@ -285,6 +285,8 @@
     <ClCompile Include="csimplesocket\SimpleSocket.cpp" />
     <ClCompile Include="geometry.cpp" />
     <ClCompile Include="goal.cpp" />
+    <ClCompile Include="GoalCaptureNearFacility.cpp" />
+    <ClCompile Include="GoalDefendCapturers.cpp" />
     <ClCompile Include="goalDefendHelicoptersFromRush.cpp" />
     <ClCompile Include="GoalDefendIfv.cpp" />
     <ClCompile Include="GoalDefendTank.cpp" />
@@ -318,6 +320,8 @@
     <ClInclude Include="forwardDeclarations.h" />
     <ClInclude Include="geometry.h" />
     <ClInclude Include="goal.h" />
+    <ClInclude Include="GoalCaptureNearFacility.h" />
+    <ClInclude Include="GoalDefendCapturers.h" />
     <ClInclude Include="goalDefendHelicoptersFromRush.h" />
     <ClInclude Include="GoalDefendIfv.h" />
     <ClInclude Include="GoalDefendTank.h" />

@@ -15,6 +15,7 @@
 #include "model/Move.h"
 #include "model/ActionType.h"
 #include "model/Game.h"
+#include "model/Facility.h"
 
 #include "geometry.h"
 #include "VehicleGroup.h"
@@ -23,6 +24,9 @@ class State
 {
 public:
     typedef decltype(((model::Vehicle*)nullptr)->getId()) Id;
+    static const Id INVALID_ID = (Id)-1;
+
+    typedef std::unordered_map<Id, model::Facility>       FacilityById;
     typedef std::unordered_map<Id, VehiclePtr>            VehicleByID;
     typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;    // not eligible for unordered_map due to references to VehicleGroup's
     typedef std::vector<Id>                               IdList;
@@ -44,6 +48,7 @@ public:
 private:
 
     VehicleByID   m_vehicles;
+    FacilityById  m_facilities;
     IdList        m_selection;
     GroupByType   m_alliens;
     GroupByType   m_teammates;
@@ -125,6 +130,7 @@ private:
     void updateNuclearGuide();
     void updateVehicles();
 	void updateEnemyStats();
+    void updateFacilities();
 
 public:
 
@@ -132,6 +138,7 @@ public:
     enum
     {
         GROUP_ARRV_EVEN = 1,
+        GROUP_CAPTURING,
     };
 
     State() : m_world(nullptr), m_game(nullptr), m_move(nullptr), m_player(nullptr)
@@ -153,15 +160,21 @@ public:
 
     const EnemyStrategyStats& enemyStrategy() const              { return m_enemyStats; }
     bool enemyDoesNotRush() const;
+    bool enemyDoesNotHeap() const;
 
 	const GroupByType&  teammates() const                        { return m_teammates; }
 	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
-	const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
+    const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
+    const GroupByType&  alliens() const                          { return m_alliens; }
 
     const VehicleGroup* nuclearGuideGroup() const                { return m_nuclearGuideGroup; }
     Point nuclearMissileTarget() const                           { return m_nuclearGuideGroup ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
 	Point enemyNuclearMissileTarget() const                      { return m_enemy->getNextNuclearStrikeTickIndex() != -1 ? Point(m_enemy->getNextNuclearStrikeX(), m_enemy->getNextNuclearStrikeY()) : Point(); }
     VehiclePtr nuclearGuideUnit() const;
+
+    bool areFacilitiesEnabled() const                            { return !m_facilities.empty(); }
+    const FacilityById&    facilities() const                    { return m_facilities; }
+    const model::Facility* facility(Id id) const                 { auto found = m_facilities.find(id); return found != m_facilities.end() ? &found->second : nullptr; }
 
     bool isMoveCommitted() const                                 { return m_isMoveCommitted; }
     bool hasActionPoint() const                                  { return player()->getRemainingActionCooldownTicks() == 0; }
@@ -191,7 +204,7 @@ public:
     void setDeselectAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_);
     void setAssignGroupAction(int groupNumber);
 
-    void setMoveAction(const Vec2d& vector);
+    void setMoveAction(const Vec2d& vector, double maxSpeed = -1);
     void setNukeAction(const Point& point, const model::Vehicle& guide);
     void setScaleAction(double factor, const Point& center);
 };

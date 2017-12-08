@@ -30,6 +30,8 @@ void State::update(const model::World& world, const model::Player& me, const mod
 
     updateNuclearGuide();
 
+    updateFacilities();
+
     updateEnemyStats();
 }
 
@@ -135,6 +137,12 @@ void State::updateEnemyStats()
             m_enemyStats.m_startedWithSlowHeap += EnemyStrategyStats::INCREMENT;
         }
 	}
+}
+
+void State::updateFacilities()
+{
+    for (const model::Facility& f : world()->getFacilities())
+        m_facilities[f.getId()] = f;
 }
 
 void State::updateNuclearGuide()
@@ -317,11 +325,14 @@ void State::setAssignGroupAction(int groupNumber)
     m_isMoveCommitted = true;
 }
 
-void State::setMoveAction(const Vec2d& vector)
+void State::setMoveAction(const Vec2d& vector, double maxSpeed /*= -1*/)
 {
 	m_move->setAction(model::ActionType::MOVE);
 	m_move->setX(vector.m_x);
 	m_move->setY(vector.m_y);
+
+    if (maxSpeed > 0)
+        m_move->setMaxSpeed(maxSpeed);
 
 	m_isMoveCommitted = true;
 }
@@ -397,7 +408,13 @@ double State::Constants::getMobilityFactor(model::TerrainType terrain) const
 bool State::enemyDoesNotRush() const
 {
     const int tickIndex = world()->getTickIndex();
-    return tickIndex > Constants::DEFEND_DESICION_TICK && !enemyStrategy().isAirRush();;
+    return tickIndex > Constants::DEFEND_DESICION_TICK && !enemyStrategy().isAirRush();
+}
+
+bool State::enemyDoesNotHeap() const
+{
+    const int tickIndex = world()->getTickIndex();
+    return tickIndex > Constants::DEFEND_DESICION_TICK && !enemyStrategy().isSlowHeap();
 }
 
 VehiclePtr State::nuclearGuideUnit() const
