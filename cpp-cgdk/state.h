@@ -141,7 +141,7 @@ public:
         GROUP_CAPTURING,
     };
 
-    State() : m_world(nullptr), m_game(nullptr), m_move(nullptr), m_player(nullptr)
+    State() : m_world(nullptr), m_game(nullptr), m_move(nullptr), m_player(nullptr), m_enemy(nullptr)
             , m_isMoveCommitted(false), m_nuclearGuideGroup(nullptr) 
     {}
 

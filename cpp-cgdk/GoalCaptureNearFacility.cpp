@@ -54,6 +54,21 @@ State::Id CaptureNearFacility::getNearestFacility(const VehicleGroup& teammate)
     if (newEnd != sortedFacilities.end())
         sortedFacilities.erase(newEnd, sortedFacilities.end());
 
+    if (sortedFacilities.empty())
+    {
+        // fallback to capturing enemy's facilities. Don't capture factories, because there may be a lot of new vehicles
+
+        std::transform(facilities.begin(), facilities.end(), std::back_inserter(sortedFacilities), [](const auto& idFacilityPair) { return &idFacilityPair.second; });
+        newEnd = std::remove_if(sortedFacilities.begin(), sortedFacilities.end(), [this](const model::Facility* facility) 
+        {
+            return facility->getOwnerPlayerId() == state().player()->getId() 
+                || facility->getType() == FacilityType::CONTROL_CENTER;
+        });
+
+        if (newEnd != sortedFacilities.end())
+            sortedFacilities.erase(newEnd, sortedFacilities.end());
+    }
+
     Point groupPosition = teammate.m_center;
     std::sort(sortedFacilities.begin(), sortedFacilities.end(), [this, &groupPosition](const Facility* a, const Facility* b) 
     { 
