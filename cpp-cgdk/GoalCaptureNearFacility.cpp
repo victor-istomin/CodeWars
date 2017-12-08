@@ -61,8 +61,7 @@ State::Id CaptureNearFacility::getNearestFacility(const VehicleGroup& teammate)
         std::transform(facilities.begin(), facilities.end(), std::back_inserter(sortedFacilities), [](const auto& idFacilityPair) { return &idFacilityPair.second; });
         newEnd = std::remove_if(sortedFacilities.begin(), sortedFacilities.end(), [this](const model::Facility* facility) 
         {
-            return facility->getOwnerPlayerId() == state().player()->getId() 
-                || facility->getType() == FacilityType::CONTROL_CENTER;
+            return facility->getOwnerPlayerId() == state().player()->getId();
         });
 
         if (newEnd != sortedFacilities.end())
