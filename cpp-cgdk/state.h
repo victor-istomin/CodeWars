@@ -158,10 +158,12 @@ public:
 
     const EnemyStrategyStats& enemyStrategy() const              { return m_enemyStats; }
     bool enemyDoesNotRush() const;
+    bool enemyDoesNotHeap() const;
 
 	const GroupByType&  teammates() const                        { return m_teammates; }
 	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
-	const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
+    const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
+    const GroupByType&  alliens() const                          { return m_alliens; }
 
     const VehicleGroup* nuclearGuideGroup() const                { return m_nuclearGuideGroup; }
     Point nuclearMissileTarget() const                           { return m_nuclearGuideGroup ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
@@ -199,7 +201,7 @@ public:
     void setDeselectAction(const Rect& rect, model::VehicleType vehicleType = model::VehicleType::_UNKNOWN_);
     void setAssignGroupAction(int groupNumber);
 
-    void setMoveAction(const Vec2d& vector);
+    void setMoveAction(const Vec2d& vector, double maxSpeed = -1);
     void setNukeAction(const Point& point, const model::Vehicle& guide);
     void setScaleAction(double factor, const Point& center);
 };

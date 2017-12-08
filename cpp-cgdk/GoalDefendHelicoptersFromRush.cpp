@@ -115,7 +115,8 @@ DefendHelicoptersFromRush::DefendHelicoptersFromRush(State& state, GoalManager& 
     
     auto shouldStartAttack = [&isNear, &isReadyForAttack, this]()
     {
-        return isNear(fighterGroup(), allienFighters(), 5 * fighterGroup().m_rect.width());
+        const double distanceLimit = this->state().enemyDoesNotHeap() ? 8 * fighterGroup().m_rect.width() : 6 * fighterGroup().m_rect.width();
+        return isNear(fighterGroup(), allienFighters(), distanceLimit);
     };
 
 	pushBackStep(abortCheckFn, shouldStartAttack, doAttackFighters, "fighter: start attacking enemy fighters");

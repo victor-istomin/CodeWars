@@ -93,7 +93,7 @@ bool CaptureNearFacility::performCapture(GroupId performerId, State::Id facility
 
         pushNextStep([this]() {return shouldAbort(); },
                      [this]() {return hasActionPoints(); },
-                     [this, moveVector]() { state().setMoveAction(moveVector); return true; }, "capture move");
+                     [this, moveVector]() { state().setMoveAction(moveVector, state().game()->getTankSpeed()); return true; }, "capture move");
     }
     else
     {
@@ -119,7 +119,7 @@ bool CaptureNearFacility::createMixedGroup()
     Rect selectionRect = performer.m_rect;
     for (const auto& idGroupPair : state().teammates())
     {
-        const auto&         id = idGroupPair.first;
+        const auto&         id    = idGroupPair.first;
         const VehicleGroup& group = idGroupPair.second;
 
         if (id == VehicleType::FIGHTER || id == VehicleType::HELICOPTER)    // aerials have their own goal
