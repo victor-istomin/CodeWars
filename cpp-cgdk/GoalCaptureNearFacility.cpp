@@ -118,7 +118,7 @@ bool CaptureNearFacility::performCapture(GroupId performerId, State::Id facility
     return true;
 }
 
-Point CaptureNearFacility::getFacilityCenter(const model::Facility* facility)
+Point CaptureNearFacility::getFacilityCenter(const model::Facility* facility) const
 {
     static const Point centerDisplacement = { state().game()->getFacilityWidth() / 2, state().game()->getFacilityHeight() / 2 };
     Point center = Point(facility->getLeft(), facility->getTop()) + centerDisplacement;

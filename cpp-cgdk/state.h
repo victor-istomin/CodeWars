@@ -52,6 +52,7 @@ private:
     IdList        m_selection;
     GroupByType   m_alliens;
     GroupByType   m_teammates;
+    GroupByType   m_newTeammates;         // TODO: group by facility ID?
     bool          m_isMoveCommitted;
 
     Rect m_teammatesRect;
@@ -207,5 +208,7 @@ public:
     void setMoveAction(const Vec2d& vector, double maxSpeed = -1);
     void setNukeAction(const Point& point, const model::Vehicle& guide);
     void setScaleAction(double factor, const Point& center);
+
+	void setProduceAction(State::Id facilityId, model::VehicleType type = model::VehicleType::_UNKNOWN_);
 };
 

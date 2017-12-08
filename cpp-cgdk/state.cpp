@@ -44,6 +44,9 @@ void State::updateGroups()
     for (auto& group : m_alliens)
         group.second.update();
     updateGroupsRect(m_alliens, m_alliensRect);
+
+    for (auto& group : m_newTeammates)
+        group.second.update();
 }
 
 void State::updateVehicles()
@@ -53,10 +56,22 @@ void State::updateVehicles()
         auto newVehicle = std::make_shared<model::Vehicle>(v);
         m_vehicles[v.getId()] = newVehicle;
 
-        if (v.getPlayerId() == m_player->getId())
-            m_teammates[v.getType()].add(newVehicle);
-        else
-            m_alliens[v.getType()].add(newVehicle);
+		bool isTeammate = v.getPlayerId() == m_player->getId();
+		bool isProduced = isTeammate && m_world->getTickIndex() > 1;
+
+		if (isProduced)
+		{
+			// vehicle produced by factory, put it the the separate list and wait for merge
+			m_newTeammates[v.getType()].add(newVehicle);
+		}
+		else if (isTeammate)
+		{
+			m_teammates[v.getType()].add(newVehicle);
+		}
+		else
+		{
+			m_alliens[v.getType()].add(newVehicle);
+		}
     }
 
     for (const model::VehicleUpdate& update : m_world->getVehicleUpdates())
@@ -353,6 +368,17 @@ void State::setScaleAction(double factor, const Point& center)
 	m_move->setX(center.m_x);
 	m_move->setY(center.m_y);
 	m_move->setFactor(factor);
+
+	m_isMoveCommitted = true;
+}
+
+void State::setProduceAction(State::Id facilityId, model::VehicleType type /*= model::VehicleType::_UNKNOWN_*/)
+{
+	m_move->setAction(ActionType::SETUP_VEHICLE_PRODUCTION);
+	m_move->setFacilityId(facilityId);
+	
+	if (type != VehicleType::_UNKNOWN_)
+		m_move->setVehicleType(type);
 
 	m_isMoveCommitted = true;
 }

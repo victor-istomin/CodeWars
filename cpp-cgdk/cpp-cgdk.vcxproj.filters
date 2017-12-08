@@ -117,6 +117,9 @@
     <ClCompile Include="GoalDefendCapturers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GoalProduceVehicles.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyStrategy.h">
@@ -237,6 +240,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GoalDefendCapturers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GoalProduceVehicles.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

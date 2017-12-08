@@ -20,7 +20,7 @@ namespace goals
         GroupsList getGroupsForCapture();
         State::Id  getNearestFacility(const VehicleGroup& teammates);
 
-        Point getFacilityCenter(const model::Facility* facility);
+        Point getFacilityCenter(const model::Facility* facility) const;
 
         bool shouldAbort() const        { return false; }
         bool hasActionPoints() const    { return state().hasActionPoint(); }

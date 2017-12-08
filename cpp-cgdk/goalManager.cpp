@@ -6,6 +6,7 @@
 #include "GoalRushWithAircraft.h"
 #include "GoalCaptureNearFacility.h"
 #include "GoalDefendCapturers.h"
+#include "GoalProduceVehicles.h"
 #include "state.h"
 
 void GoalManager::fillCurrentGoals()
@@ -15,6 +16,7 @@ void GoalManager::fillCurrentGoals()
     if (m_state.world()->getTickIndex() == 0)
     {
         int priority = 0;
+        int backPriority = 256;
 
         m_currentGoals.emplace_back(priority++, std::make_unique<goals::MixTanksAndHealers>(m_state, *this));
         m_currentGoals.emplace_back(priority++, std::make_unique<goals::DefendHelicoptersFromRush>(m_state, *this));
@@ -25,6 +27,7 @@ void GoalManager::fillCurrentGoals()
         {
             m_currentGoals.emplace_back(priority++, std::make_unique<goals::CaptureNearFacility>(m_state, *this));
             m_currentGoals.emplace_back(priority++, std::make_unique<goals::DefendCapturers>(m_state, *this));
+            m_currentGoals.emplace_back(backPriority++, std::make_unique<goals::ProduceVehicles>(m_state, *this));
         }
         
         m_currentGoals.emplace_back(priority++, std::make_unique<goals::RushWithAircraft>(m_state, *this));
