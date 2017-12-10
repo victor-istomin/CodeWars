@@ -172,6 +172,7 @@ public:
     const VehicleGroup* nuclearGuideGroup() const                { return m_nuclearGuideGroup; }
     Point nuclearMissileTarget() const                           { return m_nuclearGuideGroup ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
 	Point enemyNuclearMissileTarget() const                      { return m_enemy->getNextNuclearStrikeTickIndex() != -1 ? Point(m_enemy->getNextNuclearStrikeX(), m_enemy->getNextNuclearStrikeY()) : Point(); }
+    int   enemyTicksToNuclearLaunch() const                      { return m_enemy->getRemainingNuclearStrikeCooldownTicks() != -1 ? m_enemy->getRemainingNuclearStrikeCooldownTicks() : -1; }
     VehiclePtr nuclearGuideUnit() const;
 
     bool areFacilitiesEnabled() const                            { return !m_facilities.empty(); }
