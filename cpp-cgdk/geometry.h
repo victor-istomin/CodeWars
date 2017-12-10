@@ -36,6 +36,8 @@ struct Point
     bool operator==(const Point& right) const                     { return std::abs(m_x - right.m_x) < k_epsilon && std::abs(m_y - right.m_y) < k_epsilon; }
     bool operator!=(const Point& right) const                     { return !(*this == right); }
 
+    bool isWithinRadius(double r) const                           { return pow2(m_x) + pow2(m_y) < pow2(r); }
+
     double getDistanceTo(const Point& other)     const            { return std::sqrt(getSquareDistance(other)); }
     double getSquareDistance(const Point& other) const            { return pow2(m_x - other.m_x) + pow2(m_y - other.m_y); }
 };
@@ -55,6 +57,7 @@ struct Rect
     // check if rect overlaps with other one
     bool overlaps(const Rect& other) const;
     bool overlaps(const Rect& other, Rect& intersection) const;
+    bool overlapsCircle(const Point& center, double radius) const;
 
     bool contains(const Point& point) const;
 

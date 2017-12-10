@@ -22,6 +22,14 @@ bool Rect::overlaps(const Rect& other, Rect& intersection) const
     return doesOverlap;
 }
 
+bool Rect::overlapsCircle(const Point& center, double radius) const
+{
+    Rect shifted = Rect(m_topLeft - center, m_bottomRight - center);
+
+    return shifted.m_topLeft.isWithinRadius(radius)     || shifted.topRight().isWithinRadius(radius)
+        || shifted.m_bottomRight.isWithinRadius(radius) || shifted.bottomLeft().isWithinRadius(radius);
+}
+
 bool Rect::contains(const Point& point) const
 {
 	return m_topLeft.m_x <= point.m_x     && m_topLeft.m_y <= point.m_y

@@ -27,7 +27,45 @@ bool DefendHelicoptersFromRush::doAttack(Callback shouldAbort, Callback shouldPr
     if (attackWith.m_units.empty() || attackTarget.m_units.empty())
         return true;   // do nothing if not possible to attach (don't block entire goal)
 
-    const Point targetPoint = getFightersTargetPoint(attackTarget, attackWith);
+    Point nukeBypassPoint;
+    Point enemyNuke = state().enemyNuclearMissileTarget();
+    if (enemyNuke != Point())
+    {
+        const double enemyNukeRadius = state().game()->getTacticalNuclearStrikeRadius();
+        Vec2d moveDirection = attackWith.m_center - enemyNuke;
+        if (moveDirection.length() < 1)
+        {
+            // just in case no luck: slightly shift nuke point, because it's bad idea to rotate or truncate zero length vector
+            enemyNuke += Vec2d(attackTarget.m_center - enemyNuke).truncate(1);
+            moveDirection = attackWith.m_center - enemyNuke;
+        }
+
+        Vec2d moveVector = Vec2d(moveDirection).truncate(enemyNukeRadius);
+
+        if (state().nuclearGuideGroup() == &attackWith)
+        {
+            // don't retreat too far
+            Vehicle& guide = *state().nuclearGuideUnit();
+            Point    myNukeTarget       = state().nuclearMissileTarget();
+            Point    plannedGuidePos    = Point(guide) + moveVector;
+            double   plannedVisionRange = state().getUnitVisionRangeAt(guide, plannedGuidePos);
+
+            // have no time for analytic solution, may be later
+            static const int    MAX_ITERATIONS    = 100;
+            static const double SHORTENING_FACTOR = 0.8;
+
+            for (int i = 0; plannedGuidePos.getDistanceTo(myNukeTarget) > plannedVisionRange && i < MAX_ITERATIONS; ++i)
+            {
+                moveVector        *= i == (MAX_ITERATIONS - 1) ? 0.0 : SHORTENING_FACTOR;
+                plannedGuidePos    = Point(guide) + moveVector;
+                plannedVisionRange = state().getUnitVisionRangeAt(guide, plannedGuidePos);
+            }
+        }
+
+        nukeBypassPoint = attackWith.m_center + moveVector;
+    }
+
+    const Point targetPoint = nukeBypassPoint != Point() ? nukeBypassPoint : getFightersTargetPoint(attackTarget, attackWith);
     Vec2d path = targetPoint - attackWith.m_center;
 
 	state().setSelectAction(attackWith);
@@ -35,9 +73,25 @@ bool DefendHelicoptersFromRush::doAttack(Callback shouldAbort, Callback shouldPr
 
     static const int MIN_TICKS_GAP = 10;
     VehiclePtr firstUnit = attackWith.m_units.front().lock();
+
     int nTicksGap = std::max(MIN_TICKS_GAP, static_cast<int>(path.length() / firstUnit->getMaxSpeed() / 4));
 
-    pushBackStep(shouldAbort, WaitSomeTicks { state(), nTicksGap }, DoNothing(), "wait next attack", StepType::ALLOW_MULTITASK);
+    int enemyNuclearGap = state().enemyTicksToNuclearLaunch() != -1 ? state().enemyTicksToNuclearLaunch() : std::numeric_limits<int>::max();
+    if (nTicksGap > enemyNuclearGap)
+    {
+        double distance = Vec2d(targetPoint - attackWith.m_center).length();
+        static const int MIN_DANGEROUS_TICKS_GAP = 5;
+
+        int enemyTicksGap = std::max(MIN_DANGEROUS_TICKS_GAP, 
+                            static_cast<int>(distance / (firstUnit->getMaxSpeed() + attackTarget.m_units.front().lock()->getMaxSpeed())));
+
+        nTicksGap = enemyTicksGap;
+    }
+
+    auto dumbWaiter = WaitSomeTicks{ state(), nTicksGap };
+    auto smartWaiter = [this, dumbWaiter]() { return state().enemyNuclearMissileTarget() != Point() || dumbWaiter(); };
+
+    pushBackStep(shouldAbort, smartWaiter, DoNothing(), "wait next attack", StepType::ALLOW_MULTITASK);
     
     pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicoptersFromRush::doAttack, this, shouldAbort, shouldProceed, std::cref(attackTarget)), 
         "attack again", StepType::ALLOW_MULTITASK);
