@@ -70,9 +70,6 @@ private:
     std::unique_ptr<Constants> m_constants;
 	EnemyStrategyStats   m_enemyStats;
 
-    static void updateGroupsRect(const GroupByType& groupsMap, Rect& rect);
-
-
     struct Constants
     {
         struct PointInt
@@ -132,6 +129,7 @@ private:
     void updateVehicles();
 	void updateEnemyStats();
     void updateFacilities();
+    void updateGroups();
 
 public:
 
@@ -167,6 +165,9 @@ public:
 	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
     const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
     const GroupByType&  alliens() const                          { return m_alliens; }
+    const GroupByType&  newTeammates() const                     { return m_newTeammates; }
+
+    void mergeNewUnits(const GroupByType& newUnits);
 
     const VehicleGroup* nuclearGuideGroup() const                { return m_nuclearGuideGroup; }
     Point nuclearMissileTarget() const                           { return m_nuclearGuideGroup ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
@@ -194,7 +195,8 @@ public:
 
     void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move);
 
-    void updateGroups();
+    static void updateGroupsRect(const GroupByType& groupsMap, Rect& rect);
+
 
     // actions
 

@@ -443,6 +443,20 @@ bool State::enemyDoesNotHeap() const
     return tickIndex > Constants::DEFEND_DESICION_TICK && !enemyStrategy().isSlowHeap();
 }
 
+void State::mergeNewUnits(const GroupByType& newUnits)
+{
+    for (const auto& idVehiclePair : newUnits)
+    {
+        m_teammates.insert(idVehiclePair);
+
+        auto foundInNewUnits = m_newTeammates.find(idVehiclePair.first);
+        if (foundInNewUnits != m_newTeammates.end())
+            m_newTeammates.erase(foundInNewUnits);
+    }
+
+    updateGroups();
+}
+
 VehiclePtr State::nuclearGuideUnit() const
 {
     Id guideId = m_player->getNextNuclearStrikeVehicleId();

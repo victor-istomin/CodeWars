@@ -1,5 +1,7 @@
 #include "GoalProduceVehicles.h"
 #include "noReleaseAssert.h"
+#include "goalUtils.h"
+#include <numeric>
 
 using namespace goals;
 using namespace model;
@@ -12,6 +14,10 @@ ProduceVehicles::ProduceVehicles(State& worldState, GoalManager& goalManager)
 	pushBackStep([this]() { return shouldAbort(); }, [this] { return shouldStartProdiction(); }, 
 	             [this]() { return startProduction(); }, 
 	             "start production", StepType::ALLOW_MULTITASK);
+
+    pushBackStep([this]() { return shouldAbort(); }, [this] { return shouldMergeNewUnits(); },
+                 [this]() { return mergeToGroup(); },
+                 "merge new units", StepType::ALLOW_MULTITASK);
 }
 
 
@@ -66,4 +72,81 @@ const model::Facility* ProduceVehicles::getNearestFacility() const
 	auto foundFactory = std::find_if(sortedFacilities.begin(), sortedFacilities.end(), [](const model::Facility* f) { return f->getType() == FacilityType::VEHICLE_FACTORY; });
 
 	return foundFactory != sortedFacilities.end() ? *foundFactory : nullptr;
+}
+
+bool ProduceVehicles::mergeToGroup()
+{
+    if (m_currentPortion.empty())
+        m_currentPortion = state().newTeammates();      // TODO: swap?
+
+    Rect vehiclesRect;
+    State::updateGroupsRect(m_currentPortion, vehiclesRect);
+
+    state().setSelectAction(vehiclesRect);
+
+    const VehicleGroup& mergeTo = getGroupToMergeTo();
+    bool shouldMergeNow = mergeTo.m_units.empty();      // TODO - alternate strategy when merging into group of 1-5 units
+
+    if (!shouldMergeNow)     
+    {
+        shouldMergeNow = vehiclesRect.overlaps(mergeTo.m_rect);
+        if (!shouldMergeNow)
+        {
+            Vec2d moveVector = mergeTo.m_center - vehiclesRect.center();
+
+            int ticksGap = std::max(10, static_cast<int>(moveVector.length() / getMaxSpeed() / 2));
+
+            // LIFO pushing order!
+
+            pushNextStep([this]() { return shouldAbort(); }, [this]() { return hasActionPoints(); }, [this]() { return mergeToGroup(); },
+                         "looping merge move");
+
+            pushNextStep([this] { return shouldAbort(); }, WaitSomeTicks(state(), ticksGap), DoNothing(), "wait looping step", StepType::ALLOW_MULTITASK);
+
+            pushNextStep([this]() { return shouldAbort(); }, [this]() { return hasActionPoints(); },
+                         [this, moveVector]() { state().setMoveAction(moveVector); return true; },
+                         "move new vehicles");
+        }
+    }
+
+    if (shouldMergeNow)
+    {
+        state().mergeNewUnits(m_currentPortion);
+        m_currentPortion.clear();
+
+        pushBackStep([this]() { return shouldAbort(); }, [this] { return shouldMergeNewUnits(); },
+                     [this]() { return mergeToGroup(); },
+                     "next merge new units", StepType::ALLOW_MULTITASK);
+    }
+
+    return true;
+}
+
+double ProduceVehicles::getMaxSpeed() const
+{
+    double maxSpeed = 0.001;
+    for (const auto& idVehiclePair : m_currentPortion)
+        if (!idVehiclePair.second.m_units.empty())
+            maxSpeed = std::max(maxSpeed, idVehiclePair.second.m_units.front().lock()->getMaxSpeed());
+
+    return maxSpeed;
+}
+
+size_t goals::ProduceVehicles::newUnitsCount() const
+{
+    const State::GroupByType& groups = state().newTeammates();
+    return std::accumulate(groups.begin(), groups.end(), 0, [](int old, const auto& idGroupPair) { return old += idGroupPair.second.m_units.size(); });
+}
+
+const VehicleGroup& goals::ProduceVehicles::getGroupToMergeTo() const
+{
+    std::list<const VehicleGroup*> groups;
+    std::transform(state().teammates().begin(), state().teammates().end(), std::back_inserter(groups), 
+        [](const auto& idGroupPair) { return &idGroupPair.second; });
+
+    groups.sort([](const VehicleGroup* a, const VehicleGroup* b) { return a->m_units.size() > b->m_units.size(); });
+
+    static const VehicleGroup k_null;
+
+    return !groups.empty() ? *groups.front() : k_null;
 }

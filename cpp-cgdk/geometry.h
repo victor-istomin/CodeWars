@@ -60,6 +60,7 @@ struct Rect
 
     double height() const                                  { return std::abs(m_bottomRight.m_y - m_topLeft.m_y); }
     double width()  const                                  { return std::abs(m_bottomRight.m_x - m_topLeft.m_x); }
+    Point  center() const                                  { return (m_topLeft + m_bottomRight) / 2; }
 
     // ensure 'inside' point is actually inside rect 
     void ensureContains(const Point& inside);
