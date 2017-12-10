@@ -45,10 +45,10 @@ bool DefendHelicoptersFromRush::doAttack(Callback shouldAbort, Callback shouldPr
         if (state().nuclearGuideGroup() == &attackWith)
         {
             // don't retreat too far
-            Vehicle& guide = *state().nuclearGuideUnit();
-            Point    myNukeTarget       = state().nuclearMissileTarget();
-            Point    plannedGuidePos    = Point(guide) + moveVector;
-            double   plannedVisionRange = state().getUnitVisionRangeAt(guide, plannedGuidePos);
+            VehiclePtr guide              = state().nuclearGuideUnit();
+            Point      myNukeTarget       = state().nuclearMissileTarget();
+            Point      plannedGuidePos    = Point(*guide) + moveVector;
+            double     plannedVisionRange = state().getUnitVisionRangeAt(*guide, plannedGuidePos);
 
             // have no time for analytic solution, may be later
             static const int    MAX_ITERATIONS    = 100;
@@ -57,8 +57,8 @@ bool DefendHelicoptersFromRush::doAttack(Callback shouldAbort, Callback shouldPr
             for (int i = 0; plannedGuidePos.getDistanceTo(myNukeTarget) > plannedVisionRange && i < MAX_ITERATIONS; ++i)
             {
                 moveVector        *= i == (MAX_ITERATIONS - 1) ? 0.0 : SHORTENING_FACTOR;
-                plannedGuidePos    = Point(guide) + moveVector;
-                plannedVisionRange = state().getUnitVisionRangeAt(guide, plannedGuidePos);
+                plannedGuidePos    = Point(*guide) + moveVector;
+                plannedVisionRange = state().getUnitVisionRangeAt(*guide, plannedGuidePos);
             }
         }
 
