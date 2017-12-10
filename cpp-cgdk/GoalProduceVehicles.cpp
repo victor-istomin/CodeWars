@@ -59,7 +59,7 @@ const model::Facility* ProduceVehicles::getNearestFacility() const
 	std::transform(facilities.begin(), facilities.end(), std::back_inserter(sortedFacilities), [](const auto& idFacilityPair) { return &idFacilityPair.second; });
 
 	auto newEnd = std::remove_if(sortedFacilities.begin(), sortedFacilities.end(),
-		[this](const auto* facility) { return facility->getOwnerPlayerId() != state().player()->getId(); });
+		[this](const auto* facility) { return facility->getOwnerPlayerId() != this->state().player()->getId(); });
 
 	if (newEnd != sortedFacilities.end())
 		sortedFacilities.erase(newEnd, sortedFacilities.end());
@@ -146,7 +146,7 @@ const VehicleGroup& goals::ProduceVehicles::getGroupToMergeTo() const
 
     groups.sort([](const VehicleGroup* a, const VehicleGroup* b) { return a->m_units.size() > b->m_units.size(); });
 
-    static const VehicleGroup k_null;
+    static const VehicleGroup k_null = VehicleGroup();
 
     return !groups.empty() ? *groups.front() : k_null;
 }

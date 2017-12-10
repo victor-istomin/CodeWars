@@ -61,8 +61,12 @@ void State::updateVehicles()
 
 		if (isProduced)
 		{
-			// vehicle produced by factory, put it the the separate list and wait for merge
-			m_newTeammates[v.getType()].add(newVehicle);
+            auto existingGroup = m_teammates[v.getType()];
+
+            if (existingGroup.m_rect.contains(v))
+                existingGroup.add(newVehicle);
+            else
+                m_newTeammates[v.getType()].add(newVehicle);   // vehicle produced by factory outside its group, put it the the separate list and wait for merge
 		}
 		else if (isTeammate)
 		{
