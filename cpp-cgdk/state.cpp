@@ -11,16 +11,17 @@ const float State::EnemyStrategyStats::INCREMENT         = MAX_SCORE / INCREMENT
 
 void State::update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)
 {
-	assert(me.isMe());
-	m_world  = &world;
-	m_player = &me;
-	m_game   = &game;
-	m_move   = &move;
-	m_enemy  = & (*std::find_if(world.getPlayers().begin(), world.getPlayers().end(), [](const Player& p) { return !p.isMe(); }));
+    assert(me.isMe());
+    m_world  = &world;
+    m_player = &me;
+    m_game   = &game;
+    m_move   = &move;
+    m_enemy  = & (*std::find_if(world.getPlayers().begin(), world.getPlayers().end(), [](const Player& p) { return !p.isMe(); }));
 
     initConstants();
+    initState();
 
-	m_isMoveCommitted = false;
+    m_isMoveCommitted = false;
 
     updateVehicles();
 
@@ -219,6 +220,17 @@ void State::initConstants()
         },
         m_world->getTerrainByCellXY(), m_world->getWeatherByCellXY()
     );
+}
+
+void State::initState()
+{
+    if (m_world->getTickIndex() == 0)
+    {
+        model::VehicleType allTypes[] = { model::VehicleType::ARRV, model::VehicleType::FIGHTER, model::VehicleType::HELICOPTER, model::VehicleType::IFV, model::VehicleType::TANK };
+
+        for (auto type : allTypes)
+            m_alliens.emplace(std::make_pair(type, VehicleGroup()));
+    }
 }
 
 void State::updateGroupsRect(const GroupByType& groupsMap, Rect& rect)

@@ -127,6 +127,7 @@ private:
 
     void updateSelection();
     void initConstants();
+    void initState();
     void updateNuclearGuide();
     void updateVehicles();
 	void updateEnemyStats();
