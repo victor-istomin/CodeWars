@@ -37,7 +37,7 @@ namespace goals
 
     public:
         DefendHelicoptersFromRush(State& state, GoalManager& goalManager);
-
+        ~DefendHelicoptersFromRush();
 	};
 }
 

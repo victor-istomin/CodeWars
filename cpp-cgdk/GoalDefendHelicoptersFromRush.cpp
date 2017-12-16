@@ -7,6 +7,7 @@
 
 #include "goalDefendHelicoptersFromRush.h"
 #include "GoalMixTanksAndHealers.h"
+#include "GoalCaptureNearFacility.h"
 #include "goalUtils.h"
 #include "goalManager.h"
 
@@ -101,9 +102,25 @@ bool DefendHelicoptersFromRush::doAttack(Callback shouldAbort, Callback shouldPr
 
 bool DefendHelicoptersFromRush::abortCheck()
 {
-    bool isFightersBeaten = state().alliens(VehicleType::FIGHTER).m_healthSum < (state().teammates(VehicleType::HELICOPTER).m_healthSum * MIN_HEALTH_FACTOR);
+    bool isDone      = false;
+    bool canSeeEnemy = !state().game()->isFogOfWarEnabled();
 
-    return state().world()->getTickIndex() > MAX_DEFEND_TICK || isFightersBeaten || state().enemyDoesNotRush();
+    if (canSeeEnemy)
+    {
+        bool isFightersBeaten = state().alliens(VehicleType::FIGHTER).m_healthSum < (state().teammates(VehicleType::HELICOPTER).m_healthSum * MIN_HEALTH_FACTOR);
+        isDone = isFightersBeaten || state().enemyDoesNotRush();
+    }
+    else
+    {
+        const auto& goals = goalManager().currentGoals();
+
+        auto itCarturersGoal = std::find_if(goals.begin(), goals.end(),
+            [](const GoalManager::GoalHolder& goal) { return dynamic_cast<const CaptureNearFacility*>(goal.m_goal.get()) != nullptr; });
+
+        isDone = itCarturersGoal == goals.end() || itCarturersGoal->m_goal->isStarted();
+    }
+
+    return state().world()->getTickIndex() > MAX_DEFEND_TICK || isDone;
 }
 
 DefendHelicoptersFromRush::DefendHelicoptersFromRush(State& state, GoalManager& goalManager)
@@ -467,5 +484,9 @@ Point DefendHelicoptersFromRush::getFightersTargetPoint(const VehicleGroup& main
         [this, &attackWith, &obstacle](const Point& p) { return attackWith.isPathFree(p, Obstacle(obstacle), m_helicopterIteration); });
 
     return attackPoints[0];
+}
+
+DefendHelicoptersFromRush::~DefendHelicoptersFromRush()
+{
 }
 
