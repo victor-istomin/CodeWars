@@ -376,11 +376,21 @@ State::Constants::PointInt State::Constants::getTileIndex(const Point& p) const
 
 model::WeatherType State::Constants::getWeather(const PointInt& tile) const
 {
+    bool isValidRange = tile.m_x < (int)m_weather.size() && tile.m_y < (int)m_weather.front().size();
+    assert(isValidRange);
+    if (!isValidRange)
+        return WeatherType::CLEAR;
+
     return m_weather[tile.m_x][tile.m_y];
 }
 
 model::TerrainType State::Constants::getTerrain(const PointInt& tile) const
 {
+    bool isValidRange = tile.m_x < (int)m_terrain.size() && (int)tile.m_y < m_terrain.front().size();
+    assert(isValidRange);
+    if (!isValidRange)
+        return TerrainType::PLAIN;
+
     return m_terrain[tile.m_x][tile.m_y];
 }
 
@@ -500,5 +510,11 @@ double State::getDistanceToAlliensRect() const
 			closestDistance = std::min(closestDistance, teammateCorner.getDistanceTo(allienCorner));
 
 	return closestDistance;
+}
+
+bool State::isValidWorldPoint(const Point& p) const
+{
+    return p.m_x >= 0 && p.m_x < game()->getWorldWidth()
+        && p.m_y >= 0 && p.m_y < game()->getWorldHeight();
 }
 

@@ -192,6 +192,7 @@ public:
 	const Rect& getTeammatesRect() const                        { return m_teammatesRect; }
 	double getDistanceToAlliensRect() const;
 
+    bool isValidWorldPoint(const Point& p) const;
 
     void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move);
 
