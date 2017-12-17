@@ -85,6 +85,24 @@ DefendCapturers::ProtectionTarget DefendCapturers::getProtectionTarget() const
         }
     }
 
+    if (alternatives.empty())
+    {
+        // invisible enemy, just defend our nearest troops
+
+        const VehicleGroup& protectors = helicopterGroup();
+
+        for (const auto& idTeammatePair : state().teammates())
+        {
+            const auto& id = idTeammatePair.first;
+            const VehicleGroup& captuters = idTeammatePair.second;
+
+            if (id == VehicleType::FIGHTER || id == VehicleType::HELICOPTER || captuters.m_units.empty())
+                continue;
+
+            alternatives.emplace_back(captuters, protectors.m_center.getSquareDistance(captuters.m_center));
+        }
+    }
+
     std::sort(alternatives.begin(), alternatives.end(), [](const ProtectionTarget& a, const ProtectionTarget& b) { return a.m_squareDistance < b.m_squareDistance; });
 
     return alternatives.empty() ? ProtectionTarget() : alternatives.front();
@@ -117,8 +135,8 @@ Point DefendCapturers::getProtectionPoint(const ProtectionTarget& protectionInfo
     const VehicleGroup& fighters    = fighterGroup();
 
     Point moveTarget = teammate->m_center;
-    bool isDangerousForDefender = !alliens->m_units.empty() && alliens->m_units.front().lock()->getType() == VehicleType::IFV;
-    if (protectionInfo.m_squareDistance > k_far || isDangerousForDefender)
+    bool isDangerousForDefender = alliens != nullptr && !alliens->m_units.empty() && alliens->m_units.front().lock()->getType() == VehicleType::IFV;
+    if (protectionInfo.m_squareDistance > k_far || isDangerousForDefender || alliens == nullptr)
         return moveTarget;
 
     Point teammatePoints[] = {

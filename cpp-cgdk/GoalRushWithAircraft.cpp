@@ -39,51 +39,60 @@ bool RushWithAircraft::doNextFightersMove()
         return false;  // KIA
 
     TargetInfo bestTargetInfo = getFightersTargetInfo();
-    const VehiclePtr firstFighter = fighters.m_units.front().lock();
-    const VehiclePtr firstEnemy   = bestTargetInfo.m_group->m_units.empty() ? VehiclePtr() : bestTargetInfo.m_group->m_units.front().lock();
 
-    if (bestTargetInfo.isEliminated() || !firstEnemy)
-        return true;  // nothing to attack
-
-    const double near = state().game()->getFighterAerialAttackRange() - 2 * state().game()->getVehicleRadius();
-    const double far  = state().getUnitVisionRange(*firstFighter);
-
-    const double healthFactor     = fighters.m_healthSum / bestTargetInfo.m_group->m_healthSum;
-    const double fightersStrength = std::max(0, firstFighter->getAerialDamage() - firstEnemy->getAerialDefence()) * healthFactor;
-
-    static const double k_minDanger = 0.01;
-    double desiredDistance = fightersStrength > bestTargetInfo.m_dangerFactor || bestTargetInfo.m_dangerFactor < k_minDanger ? near : far;
-    if (!isAerial(bestTargetInfo.m_type))
+    struct Nearest
     {
-        desiredDistance = far;   // force far distance, because fighter can't attack them. TODO: maybe, overlap with enemy between nuke attacks?
-    }
-
-    /*** temporary code: replace this by something more sophisticated */
-    //desiredDistance += (fighters.m_rect.height() + fighters.m_rect.width()) / 4; 
-    /*****/
-
-    struct Nearest 
-    { 
-        Point  m_position       = Point(); 
-        double m_squareDistance = std::numeric_limits<double>::max(); 
+        Point  m_position = Point();
+        double m_squareDistance = std::numeric_limits<double>::max();
 
         void apply(const Point& candidate, double candidateSqDistance)
         {
             if (candidateSqDistance < m_squareDistance)
             {
-                m_position       = candidate;
+                m_position = candidate;
                 m_squareDistance = candidateSqDistance;
             }
         }
     };
 
     Nearest target;
-    std::for_each(bestTargetInfo.m_group->m_units.begin(), bestTargetInfo.m_group->m_units.end(), 
-        [&target, &fighters](const VehicleCache& unitCache) 
-    { 
-        VehiclePtr unit = unitCache.lock(); 
-        target.apply(*unit, fighters.m_center.getSquareDistance(*unit));
-    });
+
+    VehiclePtr firstEnemy;
+    if (state().game()->isFogOfWarEnabled() && bestTargetInfo.isEliminated())
+    {
+        // target may be not visible due to fog of var, in this case assume it's in bottom right corner
+        target.m_position = Point(state().game()->getWorldWidth(), state().game()->getWorldHeight()) - Point(fighters.m_rect.width(), fighters.m_rect.height());
+        target.m_squareDistance = target.m_position.getSquareDistance(fighters.m_center);
+    }
+    else
+    {
+        firstEnemy = bestTargetInfo.m_group->m_units.empty() ? VehiclePtr() : bestTargetInfo.m_group->m_units.front().lock();
+        if (bestTargetInfo.isEliminated() || !firstEnemy)
+            return true;  // nothing to attack
+
+        std::for_each(bestTargetInfo.m_group->m_units.begin(), bestTargetInfo.m_group->m_units.end(),
+            [&target, &fighters](const VehicleCache& unitCache)
+        {
+            VehiclePtr unit = unitCache.lock();
+            target.apply(*unit, fighters.m_center.getSquareDistance(*unit));
+        });
+    }
+
+    const VehiclePtr firstFighter = fighters.m_units.front().lock();
+
+    static const double k_minDanger = 0.01;
+
+    const double near = state().game()->getFighterAerialAttackRange() - 2 * state().game()->getVehicleRadius();
+    const double far = state().getUnitVisionRange(*firstFighter);
+
+    const double healthFactor = fighters.m_healthSum / bestTargetInfo.m_group->m_healthSum;
+    const double fightersStrength = firstEnemy ? std::max(0, firstFighter->getAerialDamage() - firstEnemy->getAerialDefence()) * healthFactor : 1;
+
+    double desiredDistance = fightersStrength > bestTargetInfo.m_dangerFactor || bestTargetInfo.m_dangerFactor < k_minDanger ? near : far;
+    if (!isAerial(bestTargetInfo.m_type))
+    {
+        desiredDistance = far;   // force far distance, because fighter can't attack them. TODO: maybe, overlap with enemy between nuke attacks?
+    }
 
     Vec2d reverseDirection = Vec2d(fighters.m_center - target.m_position).truncate(desiredDistance);
     Point attackPosition   = target.m_position + reverseDirection;
@@ -188,10 +197,17 @@ bool RushWithAircraft::validateMoveVector(Vec2d& moveVector)
         Point nextGuidePoint = Point(*nuclearGuide) + moveVector;
         assert(nukePoint != Point());
 
-        double nextHighlightDistance = nextGuidePoint.getDistanceTo(nukePoint);
-        double nextVisionRange = state().getUnitVisionRangeAt(*nuclearGuide, nextGuidePoint);
+        if (state().isValidWorldPoint(nextGuidePoint))
+        {
+            double nextHighlightDistance = nextGuidePoint.getDistanceTo(nukePoint);
+            double nextVisionRange = state().getUnitVisionRangeAt(*nuclearGuide, nextGuidePoint);
 
-        isMoveAllowed = nextVisionRange >= nextHighlightDistance;
+            isMoveAllowed = nextVisionRange >= nextHighlightDistance;
+        }
+        else
+        {
+            isMoveAllowed = false;
+        }
     }
 
     static const double k_minStep = state().game()->getFighterSpeed() / 8;

@@ -89,9 +89,9 @@ public:
     Goal(State& state, GoalManager& goalManager) : m_goalManager(goalManager), m_state(state), m_isStarted(false) {}
     virtual ~Goal()                                         {}
 
-    bool isFinished()                    { return m_steps.empty(); }
-	bool isStarted()                     { return m_isStarted; }
-	bool canPause()                      { return isFinished() || !isStarted() || m_steps.front()->m_isMultitaskPoint; }
+    bool isFinished() const              { return m_steps.empty(); }
+    bool isStarted() const               { return m_isStarted; }
+    bool canPause() const                { return isFinished() || !isStarted() || m_steps.front()->m_isMultitaskPoint; }
 
     bool isEligibleForBackgroundMode(const Goal* interrupted) 
 	{ 

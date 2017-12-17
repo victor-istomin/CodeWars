@@ -11,16 +11,17 @@ const float State::EnemyStrategyStats::INCREMENT         = MAX_SCORE / INCREMENT
 
 void State::update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)
 {
-	assert(me.isMe());
-	m_world  = &world;
-	m_player = &me;
-	m_game   = &game;
-	m_move   = &move;
-	m_enemy  = & (*std::find_if(world.getPlayers().begin(), world.getPlayers().end(), [](const Player& p) { return !p.isMe(); }));
+    assert(me.isMe());
+    m_world  = &world;
+    m_player = &me;
+    m_game   = &game;
+    m_move   = &move;
+    m_enemy  = & (*std::find_if(world.getPlayers().begin(), world.getPlayers().end(), [](const Player& p) { return !p.isMe(); }));
 
     initConstants();
+    initState();
 
-	m_isMoveCommitted = false;
+    m_isMoveCommitted = false;
 
     updateVehicles();
 
@@ -240,6 +241,17 @@ void State::initConstants()
     );
 }
 
+void State::initState()
+{
+    if (m_world->getTickIndex() == 0)
+    {
+        model::VehicleType allTypes[] = { model::VehicleType::ARRV, model::VehicleType::FIGHTER, model::VehicleType::HELICOPTER, model::VehicleType::IFV, model::VehicleType::TANK };
+
+        for (auto type : allTypes)
+            m_alliens.emplace(std::make_pair(type, VehicleGroup()));
+    }
+}
+
 void State::updateGroupsRect(const GroupByType& groupsMap, Rect& rect)
 {
 	static const Rect k_nullRect = Rect();
@@ -394,11 +406,21 @@ State::Constants::PointInt State::Constants::getTileIndex(const Point& p) const
 
 model::WeatherType State::Constants::getWeather(const PointInt& tile) const
 {
+    bool isValidRange = tile.m_x < (int)m_weather.size() && tile.m_y < (int)m_weather.front().size();
+    assert(isValidRange);
+    if (!isValidRange)
+        return WeatherType::CLEAR;
+
     return m_weather[tile.m_x][tile.m_y];
 }
 
 model::TerrainType State::Constants::getTerrain(const PointInt& tile) const
 {
+    bool isValidRange = tile.m_x < (int)m_terrain.size() && (int)tile.m_y < m_terrain.front().size();
+    assert(isValidRange);
+    if (!isValidRange)
+        return TerrainType::PLAIN;
+
     return m_terrain[tile.m_x][tile.m_y];
 }
 
@@ -532,5 +554,11 @@ double State::getDistanceToAlliensRect() const
 			closestDistance = std::min(closestDistance, teammateCorner.getDistanceTo(allienCorner));
 
 	return closestDistance;
+}
+
+bool State::isValidWorldPoint(const Point& p) const
+{
+    return p.m_x >= 0 && p.m_x < game()->getWorldWidth()
+        && p.m_y >= 0 && p.m_y < game()->getWorldHeight();
 }
 

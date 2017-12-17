@@ -22,6 +22,8 @@ namespace goals
             double               m_squareDistance;
 
             ProtectionTarget(const VehicleGroup& teammate, const VehicleGroup& alliens);
+            ProtectionTarget(const VehicleGroup& teammate, double sqDistanceToTeammate) : m_teammate(&teammate), m_alliens(nullptr), m_squareDistance(sqDistanceToTeammate) {}
+
             ProtectionTarget() : m_teammate(nullptr), m_alliens(nullptr), m_squareDistance(0) {}
         };
 

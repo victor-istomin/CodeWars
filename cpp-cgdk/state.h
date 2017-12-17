@@ -125,6 +125,7 @@ private:
 
     void updateSelection();
     void initConstants();
+    void initState();
     void updateNuclearGuide();
     void updateVehicles();
 	void updateEnemyStats();
@@ -193,6 +194,7 @@ public:
 	const Rect& getTeammatesRect() const                        { return m_teammatesRect; }
 	double getDistanceToAlliensRect() const;
 
+    bool isValidWorldPoint(const Point& p) const;
 
     void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move);
 
