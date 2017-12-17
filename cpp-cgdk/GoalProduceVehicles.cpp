@@ -78,6 +78,7 @@ bool ProduceVehicles::mergeToGroup()
 {
     if (m_currentPortion.empty())
         m_currentPortion = state().newTeammates();      // TODO: swap?
+    assert(0);   // BUG here ^ I need to swap lists
 
     Rect vehiclesRect;
     State::updateGroupsRect(m_currentPortion, vehiclesRect);
