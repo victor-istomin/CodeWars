@@ -166,7 +166,9 @@ public:
 	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
     const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
     const GroupByType&  alliens() const                          { return m_alliens; }
-    const GroupByType&  newTeammates() const                     { return m_newTeammates; }
+    size_t  newTeammatesCount() const;
+
+    GroupByType popNewUnits();
 
     void mergeNewUnits(const GroupByType& newUnits);
 

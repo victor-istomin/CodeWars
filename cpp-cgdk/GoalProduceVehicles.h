@@ -10,13 +10,12 @@ namespace goals
 	{
 		virtual bool isCompatibleWith(const Goal* interrupted) override;
 
-        size_t newUnitsCount() const;
-        static const size_t MERGE_THRESHOLD = 100;
+        static const size_t MERGE_THRESHOLD;
 
 		bool shouldAbort() const           { return false; }
 		bool hasActionPoints() const       { return state().hasActionPoint(); }
 		bool shouldStartProdiction() const { return hasActionPoints() && getNearestFacility() != nullptr; }
-        bool shouldMergeNewUnits() const   { return hasActionPoints() && newUnitsCount() >= MERGE_THRESHOLD; }
+        bool shouldMergeNewUnits() const   { return hasActionPoints() && state().newTeammatesCount() >= MERGE_THRESHOLD; }
 
 		Point getFacilityCenter(const model::Facility* facility) const;
 

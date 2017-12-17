@@ -1,5 +1,6 @@
 #include "state.h"
 #include <cmath>
+#include <numeric>
 
 using namespace model;   // TODO: cleanup
 
@@ -416,7 +417,7 @@ model::WeatherType State::Constants::getWeather(const PointInt& tile) const
 
 model::TerrainType State::Constants::getTerrain(const PointInt& tile) const
 {
-    bool isValidRange = tile.m_x < (int)m_terrain.size() && (int)tile.m_y < m_terrain.front().size();
+    bool isValidRange = tile.m_x < (int)m_terrain.size() && tile.m_y < (int)m_terrain.front().size();
     assert(isValidRange);
     if (!isValidRange)
         return TerrainType::PLAIN;
@@ -467,6 +468,19 @@ bool State::enemyDoesNotHeap() const
 {
     const int tickIndex = world()->getTickIndex();
     return tickIndex > Constants::DEFEND_DESICION_TICK && !enemyStrategy().isSlowHeap();
+}
+
+size_t State::newTeammatesCount() const
+{
+    return std::accumulate(m_newTeammates.begin(), m_newTeammates.end(), 0, 
+        [](int old, const auto& idGroupPair) { return old += idGroupPair.second.m_units.size(); });
+}
+
+State::GroupByType State::popNewUnits()
+{
+    GroupByType newPortion;
+    std::swap(newPortion, m_newTeammates);
+    return newPortion;
 }
 
 void State::mergeNewUnits(const GroupByType& newUnits)

@@ -6,6 +6,9 @@
 using namespace goals;
 using namespace model;
 
+const size_t ProduceVehicles::MERGE_THRESHOLD = 30;
+
+
 ProduceVehicles::ProduceVehicles(State& worldState, GoalManager& goalManager)
 	: Goal(worldState, goalManager)
 {
@@ -77,10 +80,12 @@ const model::Facility* ProduceVehicles::getNearestFacility() const
 bool ProduceVehicles::mergeToGroup()
 {
     if (m_currentPortion.empty())
-        m_currentPortion = state().newTeammates();      // TODO: swap?
-    assert(0);   // BUG here ^ I need to swap lists
+        m_currentPortion = state().popNewUnits();
 
     Rect vehiclesRect;
+    for (auto& idGroupPair : m_currentPortion)
+        idGroupPair.second.update();
+
     State::updateGroupsRect(m_currentPortion, vehiclesRect);
 
     state().setSelectAction(vehiclesRect);
@@ -100,7 +105,7 @@ bool ProduceVehicles::mergeToGroup()
             // LIFO pushing order!
 
             pushNextStep([this]() { return shouldAbort(); }, [this]() { return hasActionPoints(); }, [this]() { return mergeToGroup(); },
-                         "looping merge move");
+                         "looping merge move", StepType::ALLOW_MULTITASK);
 
             pushNextStep([this] { return shouldAbort(); }, WaitSomeTicks(state(), ticksGap), DoNothing(), "wait looping step", StepType::ALLOW_MULTITASK);
 
@@ -131,12 +136,6 @@ double ProduceVehicles::getMaxSpeed() const
             maxSpeed = std::max(maxSpeed, idVehiclePair.second.m_units.front().lock()->getMaxSpeed());
 
     return maxSpeed;
-}
-
-size_t goals::ProduceVehicles::newUnitsCount() const
-{
-    const State::GroupByType& groups = state().newTeammates();
-    return std::accumulate(groups.begin(), groups.end(), 0, [](int old, const auto& idGroupPair) { return old += idGroupPair.second.m_units.size(); });
 }
 
 const VehicleGroup& goals::ProduceVehicles::getGroupToMergeTo() const
