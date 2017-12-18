@@ -23,7 +23,7 @@ CaptureNearFacility::~CaptureNearFacility()
 bool CaptureNearFacility::startCapture()
 {
     auto activeGroups = getGroupsForCapture();
-    for (GroupId groupId : activeGroups)
+    for (GroupHandle groupId : activeGroups)
     {
         State::Id targetId = getNearestFacility(state().teammates(groupId));
         if (targetId == State::INVALID_ID)
@@ -83,10 +83,10 @@ State::Id CaptureNearFacility::getNearestFacility(const VehicleGroup& teammate)
 
 CaptureNearFacility::GroupsList CaptureNearFacility::getGroupsForCapture()
 {
-    return { VehicleType::TANK };  // TODO
+    return { GroupHandle::initial(VehicleType::TANK) };  // TODO
 }
 
-bool CaptureNearFacility::performCapture(GroupId performerId, State::Id facilityId)
+bool CaptureNearFacility::performCapture(GroupHandle performerId, State::Id facilityId)
 {
     const VehicleGroup& performer = state().teammates(performerId);
 
@@ -133,10 +133,10 @@ bool CaptureNearFacility::createMixedGroup()
     Rect selectionRect = performer.m_rect;
     for (const auto& idGroupPair : state().teammates())
     {
-        const auto&         id    = idGroupPair.first;
+        const auto&         type  = idGroupPair.first.vehicleType();
         const VehicleGroup& group = idGroupPair.second;
 
-        if (id == VehicleType::FIGHTER || id == VehicleType::HELICOPTER)    // aerials have their own goal
+        if (type == VehicleType::FIGHTER || type == VehicleType::HELICOPTER)    // aerials have their own goal
             continue;
 
         if (selectionRect.overlaps(group.m_rect))

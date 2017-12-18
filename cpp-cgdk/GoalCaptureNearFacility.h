@@ -10,11 +10,11 @@ namespace goals
     class CaptureNearFacility 
         : public Goal
     {
-        typedef std::list<GroupId> GroupsList;
+        typedef std::list<GroupHandle> GroupsList;
 
         static const int ID_NONE = -1;
 
-        typedef std::unordered_map<GroupId, State::Id>  GroupTargets;
+        typedef std::unordered_map<GroupHandle, State::Id>  GroupTargets;
         GroupTargets m_actualTargets;
 
         GroupsList getGroupsForCapture();
@@ -29,7 +29,7 @@ namespace goals
 
         bool createMixedGroup();
         bool startCapture();
-        bool performCapture(GroupId performer, State::Id facilityId);
+        bool performCapture(GroupHandle performer, State::Id facilityId);
 
     public:
         CaptureNearFacility(State& state, GoalManager& goalManager);

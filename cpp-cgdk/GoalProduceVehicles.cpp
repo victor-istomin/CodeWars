@@ -79,6 +79,7 @@ const model::Facility* ProduceVehicles::getNearestFacility() const
 
 bool ProduceVehicles::mergeToGroup()
 {
+    // TODO: use group handles
     if (m_currentPortion.empty())
         m_currentPortion = state().popNewUnits();
 

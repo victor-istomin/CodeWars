@@ -61,22 +61,24 @@ void State::updateVehicles()
 		bool isTeammate = v.getPlayerId() == m_player->getId();
 		bool isProduced = isTeammate && m_world->getTickIndex() > 1;
 
+        GroupHandle initialGroup = GroupHandle::initial(v);
+
 		if (isProduced)
 		{
-            auto existingGroup = m_teammates[v.getType()];
+            auto existingGroup = m_teammates[initialGroup];
 
             if (existingGroup.m_rect.contains(v))
                 existingGroup.add(newVehicle);
             else
-                m_newTeammates[v.getType()].add(newVehicle);   // vehicle produced by factory outside its group, put it the the separate list and wait for merge
+                m_newTeammates[GroupHandle::artificial(v)].add(newVehicle);   // vehicle produced by factory outside its group, put it the the separate list and wait for merge
 		}
 		else if (isTeammate)
 		{
-			m_teammates[v.getType()].add(newVehicle);
+			m_teammates[initialGroup].add(newVehicle);
 		}
 		else
 		{
-			m_alliens[v.getType()].add(newVehicle);
+			m_alliens[initialGroup].add(newVehicle);
 		}
     }
 
@@ -97,7 +99,7 @@ void State::updateEnemyStats()
 	static const VehicleType s_allUnits[]    = { VehicleType::ARRV, VehicleType::TANK, VehicleType::IFV , VehicleType::FIGHTER, VehicleType::HELICOPTER };
 
 	static const int MAX_START_PHASE_TICKS = 3000; // QuickStart guy arrives at ~500 tick, so this looks enough for start
-	auto notExistent = [this](VehicleType type) { return m_alliens.find(type) == m_alliens.end(); };
+	auto notExistent = [this](VehicleType type) { return m_alliens.find(GroupHandle::initial(type)) == m_alliens.end(); };
 
     bool isStartPhase = world()->getTickIndex() < MAX_START_PHASE_TICKS
         && std::find_if(std::begin(s_allUnits), std::end(s_allUnits), notExistent) == std::end(s_allUnits);
@@ -249,7 +251,7 @@ void State::initState()
         model::VehicleType allTypes[] = { model::VehicleType::ARRV, model::VehicleType::FIGHTER, model::VehicleType::HELICOPTER, model::VehicleType::IFV, model::VehicleType::TANK };
 
         for (auto type : allTypes)
-            m_alliens.emplace(std::make_pair(type, VehicleGroup()));
+            m_alliens.emplace(std::make_pair(GroupHandle::initial(type), VehicleGroup()));
     }
 }
 
@@ -529,7 +531,7 @@ bool State::isEnemyCoveredByAnother(model::VehicleType groupId, VehicleGroup& me
     others.reserve(m_alliens.size());
 
     for (const auto& idGroupPair : m_alliens)
-        if (idGroupPair.first != groupId)
+        if (idGroupPair.first.vehicleType() != groupId)
             others.push_back(&idGroupPair.second);
 
     bool isCovered = false;

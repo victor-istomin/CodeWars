@@ -72,8 +72,8 @@ DefendCapturers::ProtectionTarget DefendCapturers::getProtectionTarget() const
 
     for (const auto& idTeammatePair : state().teammates())
     {
-        const auto& id = idTeammatePair.first;
-        if (id == VehicleType::FIGHTER || id == VehicleType::HELICOPTER || idTeammatePair.second.m_units.empty())
+        const auto& type = idTeammatePair.first.vehicleType();
+        if (type == VehicleType::FIGHTER || type == VehicleType::HELICOPTER || idTeammatePair.second.m_units.empty())
             continue;
 
         for (const auto& idAllienPair : state().alliens())
@@ -93,10 +93,10 @@ DefendCapturers::ProtectionTarget DefendCapturers::getProtectionTarget() const
 
         for (const auto& idTeammatePair : state().teammates())
         {
-            const auto& id = idTeammatePair.first;
+            const auto&         type      = idTeammatePair.first.vehicleType();
             const VehicleGroup& captuters = idTeammatePair.second;
 
-            if (id == VehicleType::FIGHTER || id == VehicleType::HELICOPTER || captuters.m_units.empty())
+            if (type == VehicleType::FIGHTER || type == VehicleType::HELICOPTER || captuters.m_units.empty())
                 continue;
 
             alternatives.emplace_back(captuters, protectors.m_center.getSquareDistance(captuters.m_center));

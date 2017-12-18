@@ -28,7 +28,7 @@ public:
 
     typedef std::unordered_map<Id, model::Facility>       FacilityById;
     typedef std::unordered_map<Id, VehiclePtr>            VehicleByID;
-    typedef std::map<model::VehicleType, VehicleGroup>    GroupByType;    // not eligible for unordered_map due to references to VehicleGroup's
+    typedef std::map<GroupHandle, VehicleGroup>           GroupByType;    // not eligible for unordered_map due to references to VehicleGroup's
     typedef std::vector<Id>                               IdList;
 
 	struct EnemyStrategyStats
@@ -163,8 +163,10 @@ public:
     bool enemyDoesNotHeap() const;
 
 	const GroupByType&  teammates() const                        { return m_teammates; }
-	const VehicleGroup& teammates(model::VehicleType type) const { return m_teammates.find(type)->second; }
-    const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(type)->second; }
+    const VehicleGroup& teammates(GroupHandle handle) const      { return m_teammates.find(handle)->second; }
+    const VehicleGroup& teammates(model::VehicleType type) const { return teammates(GroupHandle::initial(type)); }
+
+    const VehicleGroup& alliens(model::VehicleType type)   const { return m_alliens.find(GroupHandle::initial(type))->second; }
     const GroupByType&  alliens() const                          { return m_alliens; }
     size_t  newTeammatesCount() const;
 
