@@ -2,6 +2,7 @@
 
 #include "GoalDefendCapturers.h"
 #include "GoalCaptureNearFacility.h"
+#include "GoalProduceVehicles.h"
 #include "goalUtils.h"
 
 using namespace goals;
@@ -21,7 +22,8 @@ DefendCapturers::~DefendCapturers()
 
 bool DefendCapturers::isCompatibleWith(const Goal* interrupted)
 {
-    return nullptr != dynamic_cast<const CaptureNearFacility*>(interrupted);
+    return nullptr != dynamic_cast<const CaptureNearFacility*>(interrupted)
+        || nullptr != dynamic_cast<const ProduceVehicles*>(interrupted);
 }
 
 bool DefendCapturers::shouldAbort()

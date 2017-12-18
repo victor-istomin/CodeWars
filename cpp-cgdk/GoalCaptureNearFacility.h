@@ -25,6 +25,8 @@ namespace goals
         bool shouldAbort() const        { return false; }
         bool hasActionPoints() const    { return state().hasActionPoint(); }
 
+        virtual bool isCompatibleWith(const Goal* interrupted) override;
+
         // actions
 
         bool createMixedGroup();
@@ -34,8 +36,6 @@ namespace goals
     public:
         CaptureNearFacility(State& state, GoalManager& goalManager);
         ~CaptureNearFacility();
-
-
     };
 }
 

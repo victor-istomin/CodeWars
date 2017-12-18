@@ -485,17 +485,9 @@ State::GroupByType State::popNewUnits()
     return newPortion;
 }
 
-void State::mergeNewUnits(const GroupByType& newUnits)
+void State::mergeNewUnits(const std::pair<GroupHandle, VehicleGroup>& newUnits)
 {
-    for (const auto& idVehiclePair : newUnits)
-    {
-        m_teammates.insert(idVehiclePair);
-
-        auto foundInNewUnits = m_newTeammates.find(idVehiclePair.first);
-        if (foundInNewUnits != m_newTeammates.end())
-            m_newTeammates.erase(foundInNewUnits);
-    }
-
+    m_teammates.insert(newUnits);
     updateGroups();
 }
 

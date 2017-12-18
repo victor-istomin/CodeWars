@@ -1,4 +1,7 @@
 #include "GoalCaptureNearFacility.h"
+#include "GoalRushWithAircraft.h"
+#include "GoalProduceVehicles.h"
+
 #include "goalUtils.h"
 
 using namespace goals;
@@ -34,7 +37,9 @@ bool CaptureNearFacility::startCapture()
                      [this, groupId, targetId]() { return performCapture(groupId, targetId);}, "perform facility capture");
     }
 
-    pushBackStep([this]() {return shouldAbort(); }, [this]() {return hasActionPoints(); }, [this]() { return startCapture(); }, "continue capturing");
+    pushBackStep([this]() { return shouldAbort(); }, 
+                 [this]() { return hasActionPoints(); }, 
+                 [this]() { return startCapture(); }, "continue capturing", StepType::ALLOW_MULTITASK);
 
     return true;
 }
@@ -160,4 +165,10 @@ bool CaptureNearFacility::createMixedGroup()
     state().setSelectAction(selectionRect, VehicleType::TANK);
 
     return true;
+}
+
+bool CaptureNearFacility::isCompatibleWith(const Goal* interrupted)
+{
+    return typeid(*interrupted) == typeid(ProduceVehicles)
+        || typeid(*interrupted) == typeid(RushWithAircraft);
 }

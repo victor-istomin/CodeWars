@@ -91,7 +91,7 @@ bool ProduceVehicles::mergeToGroup()
 
     state().setSelectAction(vehiclesRect);
 
-    const VehicleGroup& mergeTo = getGroupToMergeTo();
+    const VehicleGroup& mergeTo = state().teammates(VehicleType::HELICOPTER); //getGroupToMergeTo();
     bool shouldMergeNow = mergeTo.m_units.empty();      // TODO - alternate strategy when merging into group of 1-5 units
 
     if (!shouldMergeNow)     
@@ -118,12 +118,37 @@ bool ProduceVehicles::mergeToGroup()
 
     if (shouldMergeNow)
     {
-        state().mergeNewUnits(m_currentPortion);
+        for (std::pair<GroupHandle, VehicleGroup> idGroupPair : m_currentPortion)
+        {
+            idGroupPair.first = GroupHandle::initial(idGroupPair.first.vehicleType());   // merge to initial group
+            state().mergeNewUnits(idGroupPair);
+        }
+
         m_currentPortion.clear();
 
-        pushBackStep([this]() { return shouldAbort(); }, [this] { return shouldMergeNewUnits(); },
+        // LIFO pushing order
+
+        pushNextStep([this]() { return shouldAbort(); }, [this] { return shouldMergeNewUnits(); },
                      [this]() { return mergeToGroup(); },
                      "next merge new units", StepType::ALLOW_MULTITASK);
+
+        // TODO - move this to another goal
+        // note: this is blocking wait. TODO: block helicopters only
+        pushNextStep([this]() { return shouldAbort(); }, WaitUntilStops(state().teammates(VehicleType::HELICOPTER)), DoNothing(), "wait for scaling");
+
+        // TODO - move this to another goal
+        static const double k_reunionScaleFactor = 0.1;
+        pushNextStep([this]() { return shouldAbort(); },
+                     [this]() { return hasActionPoints(); },
+                     [this]() { state().setScaleAction(k_reunionScaleFactor, state().teammates(VehicleType::HELICOPTER).m_center); return true; },
+                     "select helicopters for compacting");
+
+        // TODO - move this to another goal
+        pushNextStep([this]() { return shouldAbort(); },
+            [this]() { return hasActionPoints(); },
+            [this]() { state().setSelectAction(state().teammates(VehicleType::HELICOPTER)); return true;  },
+            "select helicopters for compacting");
+
     }
 
     return true;

@@ -112,8 +112,8 @@ GoalDefendIfv::GoalDefendIfv(State& strategyState, GoalManager& goalManager)
         return state().hasActionPoint() && isPathFree;
     };
 
-    pushBackStep(abortCheckFn, hasActionPointFn, [this]() { return shiftAircraft(); }, "defend ifv: shift aircraft");
-    pushBackStep(abortCheckFn, canMoveHelicopters, [this]() { return moveHelicopters(); }, "defend ifv: move helicopters");
+    pushBackStep(abortCheckFn, hasActionPointFn, [this]() { return shiftAircraft(); }, "defend ifv: shift aircraft", StepType::ALLOW_MULTITASK);
+    pushBackStep(abortCheckFn, canMoveHelicopters, [this]() { return moveHelicopters(); }, "defend ifv: move helicopters", StepType::ALLOW_MULTITASK);
 }
 
 

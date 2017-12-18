@@ -172,7 +172,7 @@ public:
 
     GroupByType popNewUnits();
 
-    void mergeNewUnits(const GroupByType& newUnits);
+    void mergeNewUnits(const std::pair<GroupHandle, VehicleGroup>& newUnits);
 
     const VehicleGroup* nuclearGuideGroup() const                { return m_nuclearGuideGroup; }
     Point nuclearMissileTarget() const                           { return m_nuclearGuideGroup ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }

@@ -3,6 +3,7 @@
 
 #include "GoalRushWithAircraft.h"
 #include "GoalCaptureNearFacility.h"
+#include "GoalProduceVehicles.h"
 #include "goalUtils.h"
 #include "noReleaseAssert.h"
 
@@ -230,5 +231,6 @@ bool RushWithAircraft::validateMoveVector(Vec2d& moveVector)
 
 bool RushWithAircraft::isCompatibleWith(const Goal* interrupted)
 {
-    return dynamic_cast<const CaptureNearFacility*>(interrupted) != nullptr;
+    return typeid(*interrupted) == typeid(CaptureNearFacility)
+        || typeid(*interrupted) == typeid(ProduceVehicles);
 }

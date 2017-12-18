@@ -25,9 +25,9 @@ void GoalManager::fillCurrentGoals()
 
         if (m_state.areFacilitiesEnabled())
         {
+            m_currentGoals.emplace_back(priority++, std::make_unique<goals::ProduceVehicles>(m_state, *this));
             m_currentGoals.emplace_back(priority++, std::make_unique<goals::CaptureNearFacility>(m_state, *this));
             m_currentGoals.emplace_back(priority++, std::make_unique<goals::DefendCapturers>(m_state, *this));
-            m_currentGoals.emplace_back(backPriority++, std::make_unique<goals::ProduceVehicles>(m_state, *this));
         }
         
         m_currentGoals.emplace_back(priority++, std::make_unique<goals::RushWithAircraft>(m_state, *this));
