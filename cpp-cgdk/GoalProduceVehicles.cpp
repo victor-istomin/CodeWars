@@ -143,6 +143,11 @@ bool ProduceVehicles::mergeToGroup()
                      [this]() { state().setScaleAction(k_reunionScaleFactor, state().teammates(VehicleType::HELICOPTER).m_center); return true; },
                      "select helicopters for compacting");
 
+        pushNextStep([this]() { return shouldAbort(); },
+                     [this]() { return hasActionPoints(); },
+                     [this]() { state().setMoveAction(Vec2d()); return true; },
+                     "stop helicopters");
+
         // TODO - move this to another goal
         pushNextStep([this]() { return shouldAbort(); },
             [this]() { return hasActionPoints(); },
