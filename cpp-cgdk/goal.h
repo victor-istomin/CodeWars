@@ -39,7 +39,7 @@ private:
     std::list<StepPtr> m_steps;
     GoalManager&       m_goalManager;
     State&             m_state;
-	bool               m_isStarted;
+    bool               m_isStarted;
 
 
     void abortGoal() { m_steps.clear(); }
