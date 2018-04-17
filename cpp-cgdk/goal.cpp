@@ -20,7 +20,7 @@ void Goal::performStep(GoalManager& goalManager, bool isBackgroundMode)
     {
         if (currentStep->m_proceed())
         {
-			m_isStarted = true;
+            m_isStarted = true;
             currentStep = nullptr;
             m_steps.pop_front();
 
@@ -57,7 +57,7 @@ bool Goal::isNoMoveComitted()
 bool Goal::checkNuclearLaunch()
 {
     static const double LOOKUP_RANGE = 10 * m_state.game()->getFighterSpeed() + m_state.game()->getFighterVisionRange() 
-	                                      + m_state.game()->getTacticalNuclearStrikeRadius();
+                                          + m_state.game()->getTacticalNuclearStrikeRadius();
 
     if (!m_state.isMoveCommitted()
         && m_state.getDistanceToAlliensRect() < LOOKUP_RANGE
@@ -65,7 +65,7 @@ bool Goal::checkNuclearLaunch()
     {
         const auto& allVehicles = state().getAllVehicles();
 
-		Rect reachableRect = state().getTeammatesRect().inflate(LOOKUP_RANGE);
+        Rect reachableRect = state().getTeammatesRect().inflate(LOOKUP_RANGE);
 
         std::map<double, VehiclePtr> nukeDamageMap;
 
@@ -149,7 +149,7 @@ bool Goal::checkNuclearLaunch()
             double visionRange = state().getUnitVisionRange(*teammate) - 2 * teammate->getRadius() - rangeGap; 
             double squaredVR = visionRange * visionRange;
 
-			// TODO - add hitpoints in the middle of alliens or something similar
+            // TODO - add hitpoints in the middle of alliens or something similar
 
             for (const VehiclePtr& hitPoint : reachangeAlliens)
             {
