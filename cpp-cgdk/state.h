@@ -31,19 +31,19 @@ public:
     typedef std::map<GroupHandle, VehicleGroup>           GroupByType;    // not eligible for unordered_map due to references to VehicleGroup's
     typedef std::vector<Id>                               IdList;
 
-	struct EnemyStrategyStats
-	{
+    struct EnemyStrategyStats
+    {
         static const float MAX_SCORE;
         static const float POSITIVE_SCORE;
         static const float INCREMENT;
         static const float INCREMENT_DIVIDER;
 
-		float m_startedWithAirRush  = 0;     // start strategy: rushing me with aircraft
-		float m_startedWithSlowHeap = 0;     // start strategy: make a heap with all units and slowly go to my base
+        float m_startedWithAirRush  = 0;     // start strategy: rushing me with aircraft
+        float m_startedWithSlowHeap = 0;     // start strategy: make a heap with all units and slowly go to my base
 
         bool isAirRush() const  { return m_startedWithAirRush  >= POSITIVE_SCORE; }
         bool isSlowHeap() const { return m_startedWithSlowHeap >= POSITIVE_SCORE; }
-	};
+    };
 
 private:
 
@@ -68,7 +68,7 @@ private:
 
     struct Constants;
     std::unique_ptr<Constants> m_constants;
-	EnemyStrategyStats   m_enemyStats;
+    EnemyStrategyStats   m_enemyStats;
 
     struct Constants
     {
@@ -128,7 +128,7 @@ private:
     void initState();
     void updateNuclearGuide();
     void updateVehicles();
-	void updateEnemyStats();
+    void updateEnemyStats();
     void updateFacilities();
     void updateGroups();
 
@@ -162,7 +162,7 @@ public:
     bool enemyDoesNotRush() const;
     bool enemyDoesNotHeap() const;
 
-	const GroupByType&  teammates() const                        { return m_teammates; }
+    const GroupByType&  teammates() const                        { return m_teammates; }
     const VehicleGroup& teammates(GroupHandle handle) const      { return m_teammates.find(handle)->second; }
     const VehicleGroup& teammates(model::VehicleType type) const { return teammates(GroupHandle::initial(type)); }
 
@@ -176,7 +176,7 @@ public:
 
     const VehicleGroup* nuclearGuideGroup() const                { return m_nuclearGuideGroup; }
     Point nuclearMissileTarget() const                           { return m_nuclearGuideGroup ? Point(m_player->getNextNuclearStrikeX(), m_player->getNextNuclearStrikeY()) : Point(); }
-	Point enemyNuclearMissileTarget() const                      { return m_enemy->getNextNuclearStrikeTickIndex() != -1 ? Point(m_enemy->getNextNuclearStrikeX(), m_enemy->getNextNuclearStrikeY()) : Point(); }
+    Point enemyNuclearMissileTarget() const                      { return m_enemy->getNextNuclearStrikeTickIndex() != -1 ? Point(m_enemy->getNextNuclearStrikeX(), m_enemy->getNextNuclearStrikeY()) : Point(); }
     int   enemyTicksToNuclearLaunch() const                      { return m_enemy->getRemainingNuclearStrikeCooldownTicks() != -1 ? m_enemy->getRemainingNuclearStrikeCooldownTicks() : -1; }
     VehiclePtr nuclearGuideUnit() const;
 
@@ -195,8 +195,8 @@ public:
 
     bool isEnemyCoveredByAnother(model::VehicleType groupId, VehicleGroup& mergedGroups) const;
 
-	const Rect& getTeammatesRect() const                        { return m_teammatesRect; }
-	double getDistanceToAlliensRect() const;
+    const Rect& getTeammatesRect() const                        { return m_teammatesRect; }
+    double getDistanceToAlliensRect() const;
 
     bool isValidWorldPoint(const Point& p) const;
 
@@ -218,6 +218,6 @@ public:
     void setNukeAction(const Point& point, const model::Vehicle& guide);
     void setScaleAction(double factor, const Point& center);
 
-	void setProduceAction(State::Id facilityId, model::VehicleType type = model::VehicleType::_UNKNOWN_);
+    void setProduceAction(State::Id facilityId, model::VehicleType type = model::VehicleType::_UNKNOWN_);
 };
 

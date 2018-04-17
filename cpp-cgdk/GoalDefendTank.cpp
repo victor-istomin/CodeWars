@@ -36,8 +36,8 @@ bool GoalDefendTank::resolveFightersHelicoptersConflict()
     const VehicleGroup& fighters    = fighterGroup();
     const VehicleGroup& helicopters = helicopterGroup();
 
-	Rect safeFightersRect    = fighters.m_rect.inflate(4 * state().game()->getVehicleRadius());
-	Rect safeHelicoptersRect = helicopters.m_rect.inflate(4 * state().game()->getVehicleRadius());
+    Rect safeFightersRect    = fighters.m_rect.inflate(4 * state().game()->getVehicleRadius());
+    Rect safeHelicoptersRect = helicopters.m_rect.inflate(4 * state().game()->getVehicleRadius());
 
     if (safeFightersRect.overlaps(safeHelicoptersRect))
     {

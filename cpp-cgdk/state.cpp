@@ -58,28 +58,28 @@ void State::updateVehicles()
         auto newVehicle = std::make_shared<model::Vehicle>(v);
         m_vehicles[v.getId()] = newVehicle;
 
-		bool isTeammate = v.getPlayerId() == m_player->getId();
-		bool isProduced = isTeammate && m_world->getTickIndex() > 1;
+        bool isTeammate = v.getPlayerId() == m_player->getId();
+        bool isProduced = isTeammate && m_world->getTickIndex() > 1;
 
         GroupHandle initialGroup = GroupHandle::initial(v);
 
-		if (isProduced)
-		{
+        if (isProduced)
+        {
             auto existingGroup = m_teammates[initialGroup];
 
             if (existingGroup.m_rect.contains(v))
                 existingGroup.add(newVehicle);
             else
                 m_newTeammates[GroupHandle::artificial(v)].add(newVehicle);   // vehicle produced by factory outside its group, put it the the separate list and wait for merge
-		}
-		else if (isTeammate)
-		{
-			m_teammates[initialGroup].add(newVehicle);
-		}
-		else
-		{
-			m_alliens[initialGroup].add(newVehicle);
-		}
+        }
+        else if (isTeammate)
+        {
+            m_teammates[initialGroup].add(newVehicle);
+        }
+        else
+        {
+            m_alliens[initialGroup].add(newVehicle);
+        }
     }
 
     for (const model::VehicleUpdate& update : m_world->getVehicleUpdates())
@@ -93,53 +93,53 @@ void State::updateVehicles()
 
 void State::updateEnemyStats()
 {
-	const Point myBase = { 100, 100 };
+    const Point myBase = { 100, 100 };
 
-	static const VehicleType s_groundUnits[] = { VehicleType::ARRV, VehicleType::TANK, VehicleType::IFV };
-	static const VehicleType s_allUnits[]    = { VehicleType::ARRV, VehicleType::TANK, VehicleType::IFV , VehicleType::FIGHTER, VehicleType::HELICOPTER };
+    static const VehicleType s_groundUnits[] = { VehicleType::ARRV, VehicleType::TANK, VehicleType::IFV };
+    static const VehicleType s_allUnits[]    = { VehicleType::ARRV, VehicleType::TANK, VehicleType::IFV , VehicleType::FIGHTER, VehicleType::HELICOPTER };
 
-	static const int MAX_START_PHASE_TICKS = 3000; // QuickStart guy arrives at ~500 tick, so this looks enough for start
-	auto notExistent = [this](VehicleType type) { return m_alliens.find(GroupHandle::initial(type)) == m_alliens.end(); };
+    static const int MAX_START_PHASE_TICKS = 3000; // QuickStart guy arrives at ~500 tick, so this looks enough for start
+    auto notExistent = [this](VehicleType type) { return m_alliens.find(GroupHandle::initial(type)) == m_alliens.end(); };
 
     bool isStartPhase = world()->getTickIndex() < MAX_START_PHASE_TICKS
         && std::find_if(std::begin(s_allUnits), std::end(s_allUnits), notExistent) == std::end(s_allUnits);
 
-	if (isStartPhase)
-	{
+    if (isStartPhase)
+    {
         // --- decay old scores
 
         m_enemyStats.m_startedWithAirRush  /= EnemyStrategyStats::INCREMENT_DIVIDER;
         m_enemyStats.m_startedWithSlowHeap /= EnemyStrategyStats::INCREMENT_DIVIDER;
 
-		// --- detect whether aircraft rushes me ahead of other enemy troops 
+        // --- detect whether aircraft rushes me ahead of other enemy troops 
 
-		const VehicleGroup& enemyFighters    = alliens(VehicleType::FIGHTER);
-		const VehicleGroup& enemyHelicopters = alliens(VehicleType::HELICOPTER);
-		const Point&        fightersCenter   = enemyFighters.m_center;
+        const VehicleGroup& enemyFighters    = alliens(VehicleType::FIGHTER);
+        const VehicleGroup& enemyHelicopters = alliens(VehicleType::HELICOPTER);
+        const Point&        fightersCenter   = enemyFighters.m_center;
 
-		// TODO: detect nuking by 1-2 aircrafts
+        // TODO: detect nuking by 1-2 aircrafts
 
-		const double nearestAirEnemydistanceSq = std::min(myBase.getSquareDistance(fightersCenter), myBase.getSquareDistance(enemyHelicopters.m_center));
+        const double nearestAirEnemydistanceSq = std::min(myBase.getSquareDistance(fightersCenter), myBase.getSquareDistance(enemyHelicopters.m_center));
 
-		auto isAheadOfAircraft = [this, &myBase, &nearestAirEnemydistanceSq](VehicleType type) { return myBase.getSquareDistance(alliens(type).m_center) < nearestAirEnemydistanceSq; };
-		bool isAircraftAhead   = std::find_if(std::begin(s_groundUnits), std::end(s_groundUnits), isAheadOfAircraft) == std::end(s_groundUnits);
+        auto isAheadOfAircraft = [this, &myBase, &nearestAirEnemydistanceSq](VehicleType type) { return myBase.getSquareDistance(alliens(type).m_center) < nearestAirEnemydistanceSq; };
+        bool isAircraftAhead   = std::find_if(std::begin(s_groundUnits), std::end(s_groundUnits), isAheadOfAircraft) == std::end(s_groundUnits);
 
-		if (isAircraftAhead)
-		{
-			double aircraftGap = std::numeric_limits<double>::max();
-			for (VehicleType groundType : s_groundUnits)
-				aircraftGap = std::min(aircraftGap, fightersCenter.getDistanceTo(alliens(groundType).m_center));
+        if (isAircraftAhead)
+        {
+            double aircraftGap = std::numeric_limits<double>::max();
+            for (VehicleType groundType : s_groundUnits)
+                aircraftGap = std::min(aircraftGap, fightersCenter.getDistanceTo(alliens(groundType).m_center));
 
-			const double s_stillTogetherDistance = std::hypot(enemyFighters.m_rect.height(), enemyFighters.m_rect.width());
-			isAircraftAhead = aircraftGap > s_stillTogetherDistance;
-		}
+            const double s_stillTogetherDistance = std::hypot(enemyFighters.m_rect.height(), enemyFighters.m_rect.width());
+            isAircraftAhead = aircraftGap > s_stillTogetherDistance;
+        }
 
-		if (isAircraftAhead)
-		{
-			m_enemyStats.m_startedWithAirRush += EnemyStrategyStats::INCREMENT;   // limit is MAX_SCORE
-		}
+        if (isAircraftAhead)
+        {
+            m_enemyStats.m_startedWithAirRush += EnemyStrategyStats::INCREMENT;   // limit is MAX_SCORE
+        }
 
-		// --- detect "slow heap" strategy
+        // --- detect "slow heap" strategy
         static const size_t k_unitTypes = std::extent<decltype(s_allUnits)>::value;
 
         size_t intersections = 0;
@@ -159,7 +159,7 @@ void State::updateEnemyStats()
         {
             m_enemyStats.m_startedWithSlowHeap += EnemyStrategyStats::INCREMENT;
         }
-	}
+    }
 }
 
 void State::updateFacilities()
@@ -257,60 +257,60 @@ void State::initState()
 
 void State::updateGroupsRect(const GroupByType& groupsMap, Rect& rect)
 {
-	static const Rect k_nullRect = Rect();
+    static const Rect k_nullRect = Rect();
 
-	rect = k_nullRect;
+    rect = k_nullRect;
 
-	for (const auto& idGroupPair : groupsMap)
-	{
-		const Rect& groupRect = idGroupPair.second.m_rect;
+    for (const auto& idGroupPair : groupsMap)
+    {
+        const Rect& groupRect = idGroupPair.second.m_rect;
 
-		if (rect == k_nullRect)
-		{
-			rect = groupRect;
-		}
-		else
-		{
-			rect.ensureContains(groupRect);
-		}
-	}
+        if (rect == k_nullRect)
+        {
+            rect = groupRect;
+        }
+        else
+        {
+            rect.ensureContains(groupRect);
+        }
+    }
 }
 
 void State::setSelectAction(const Rect& rect, model::VehicleType vehicleType /*= model::VehicleType::_UNKNOWN_*/)
 {
-	m_move->setAction(model::ActionType::CLEAR_AND_SELECT);
+    m_move->setAction(model::ActionType::CLEAR_AND_SELECT);
 
-	if (vehicleType != model::VehicleType::_UNKNOWN_)
-		m_move->setVehicleType(vehicleType);
+    if (vehicleType != model::VehicleType::_UNKNOWN_)
+        m_move->setVehicleType(vehicleType);
 
-	m_move->setTop(rect.m_topLeft.m_y);
-	m_move->setLeft(rect.m_topLeft.m_x);
-	m_move->setBottom(rect.m_bottomRight.m_y);
-	m_move->setRight(rect.m_bottomRight.m_x);
+    m_move->setTop(rect.m_topLeft.m_y);
+    m_move->setLeft(rect.m_topLeft.m_x);
+    m_move->setBottom(rect.m_bottomRight.m_y);
+    m_move->setRight(rect.m_bottomRight.m_x);
 
-	m_isMoveCommitted = true;
+    m_isMoveCommitted = true;
 }
 
 void State::setSelectAction(const VehicleGroup& group)
 {
-	bool isSomethingToSelect = !group.m_units.empty();
+    bool isSomethingToSelect = !group.m_units.empty();
 
-	if (!m_selection.empty())
-	{
-		IdList desiredSelection;
-		desiredSelection.reserve(group.m_units.size());
+    if (!m_selection.empty())
+    {
+        IdList desiredSelection;
+        desiredSelection.reserve(group.m_units.size());
 
-		for (const VehicleCache& unitCache : group.m_units)
-			desiredSelection.push_back(unitCache.lock()->getId());
+        for (const VehicleCache& unitCache : group.m_units)
+            desiredSelection.push_back(unitCache.lock()->getId());
 
-		std::sort(desiredSelection.begin(), desiredSelection.end());
+        std::sort(desiredSelection.begin(), desiredSelection.end());
 
-		if (desiredSelection == m_selection)
-			isSomethingToSelect = false;  // already selected
-	}
+        if (desiredSelection == m_selection)
+            isSomethingToSelect = false;  // already selected
+    }
 
-	if (isSomethingToSelect)
-		setSelectAction(group.m_rect, group.m_units.front().lock()->getType());
+    if (isSomethingToSelect)
+        setSelectAction(group.m_rect, group.m_units.front().lock()->getType());
 }
 
 void State::setSelectAction(int groupId)
@@ -338,17 +338,17 @@ void State::setAddSelectionAction(const Rect& rect, model::VehicleType vehicleTy
 
 void State::setDeselectAction(const Rect& rect, model::VehicleType vehicleType /*= model::VehicleType::_UNKNOWN_*/)
 {
-	m_move->setAction(model::ActionType::DESELECT);
+    m_move->setAction(model::ActionType::DESELECT);
 
-	if (vehicleType != model::VehicleType::_UNKNOWN_)
-		m_move->setVehicleType(vehicleType);
+    if (vehicleType != model::VehicleType::_UNKNOWN_)
+        m_move->setVehicleType(vehicleType);
 
-	m_move->setTop(rect.m_topLeft.m_y);
-	m_move->setLeft(rect.m_topLeft.m_x);
-	m_move->setBottom(rect.m_bottomRight.m_y);
-	m_move->setRight(rect.m_bottomRight.m_x);
+    m_move->setTop(rect.m_topLeft.m_y);
+    m_move->setLeft(rect.m_topLeft.m_x);
+    m_move->setBottom(rect.m_bottomRight.m_y);
+    m_move->setRight(rect.m_bottomRight.m_x);
 
-	m_isMoveCommitted = true;
+    m_isMoveCommitted = true;
 }
 
 void State::setAssignGroupAction(int groupNumber)
@@ -361,45 +361,45 @@ void State::setAssignGroupAction(int groupNumber)
 
 void State::setMoveAction(const Vec2d& vector, double maxSpeed /*= -1*/)
 {
-	m_move->setAction(model::ActionType::MOVE);
-	m_move->setX(vector.m_x);
-	m_move->setY(vector.m_y);
+    m_move->setAction(model::ActionType::MOVE);
+    m_move->setX(vector.m_x);
+    m_move->setY(vector.m_y);
 
     if (maxSpeed > 0)
         m_move->setMaxSpeed(maxSpeed);
 
-	m_isMoveCommitted = true;
+    m_isMoveCommitted = true;
 }
 
 void State::setNukeAction(const Point& point, const model::Vehicle& guide)
 {
-	m_move->setAction(model::ActionType::TACTICAL_NUCLEAR_STRIKE);
-	m_move->setX(point.m_x);
-	m_move->setY(point.m_y);
-	m_move->setVehicleId(guide.getId());
+    m_move->setAction(model::ActionType::TACTICAL_NUCLEAR_STRIKE);
+    m_move->setX(point.m_x);
+    m_move->setY(point.m_y);
+    m_move->setVehicleId(guide.getId());
 
-	m_isMoveCommitted = true;
+    m_isMoveCommitted = true;
 }
 
 void State::setScaleAction(double factor, const Point& center)
 {
-	m_move->setAction(model::ActionType::SCALE);
-	m_move->setX(center.m_x);
-	m_move->setY(center.m_y);
-	m_move->setFactor(factor);
+    m_move->setAction(model::ActionType::SCALE);
+    m_move->setX(center.m_x);
+    m_move->setY(center.m_y);
+    m_move->setFactor(factor);
 
-	m_isMoveCommitted = true;
+    m_isMoveCommitted = true;
 }
 
 void State::setProduceAction(State::Id facilityId, model::VehicleType type /*= model::VehicleType::_UNKNOWN_*/)
 {
-	m_move->setAction(ActionType::SETUP_VEHICLE_PRODUCTION);
-	m_move->setFacilityId(facilityId);
-	
-	if (type != VehicleType::_UNKNOWN_)
-		m_move->setVehicleType(type);
+    m_move->setAction(ActionType::SETUP_VEHICLE_PRODUCTION);
+    m_move->setFacilityId(facilityId);
+    
+    if (type != VehicleType::_UNKNOWN_)
+        m_move->setVehicleType(type);
 
-	m_isMoveCommitted = true;
+    m_isMoveCommitted = true;
 }
 
 State::Constants::PointInt State::Constants::getTileIndex(const Point& p) const
@@ -546,22 +546,22 @@ bool State::isEnemyCoveredByAnother(model::VehicleType groupId, VehicleGroup& me
 // return closest distance between teammate rect and alliens rect. 0 if rect overlaps.
 double State::getDistanceToAlliensRect() const
 {
-	if (m_teammatesRect.overlaps(m_alliensRect))
-		return 0;
+    if (m_teammatesRect.overlaps(m_alliensRect))
+        return 0;
 
-	const Point teammatePoints[] = { m_teammatesRect.m_topLeft, m_teammatesRect.bottomLeft(), 
-	                                 m_teammatesRect.topRight(), m_teammatesRect.m_bottomRight };
+    const Point teammatePoints[] = { m_teammatesRect.m_topLeft, m_teammatesRect.bottomLeft(), 
+                                     m_teammatesRect.topRight(), m_teammatesRect.m_bottomRight };
 
-	const Point alliensPoints[] = { m_alliensRect.m_topLeft,  m_alliensRect.bottomLeft(),
-	                                m_alliensRect.topRight(), m_alliensRect.m_bottomRight };
+    const Point alliensPoints[] = { m_alliensRect.m_topLeft,  m_alliensRect.bottomLeft(),
+                                    m_alliensRect.topRight(), m_alliensRect.m_bottomRight };
 
-	// trivial O(n^2) is just fine when n = 4
-	double closestDistance = teammatePoints[0].getDistanceTo(alliensPoints[0]);
-	for (const Point& teammateCorner : teammatePoints)
-		for (const Point& allienCorner : alliensPoints)
-			closestDistance = std::min(closestDistance, teammateCorner.getDistanceTo(allienCorner));
+    // trivial O(n^2) is just fine when n = 4
+    double closestDistance = teammatePoints[0].getDistanceTo(alliensPoints[0]);
+    for (const Point& teammateCorner : teammatePoints)
+        for (const Point& allienCorner : alliensPoints)
+            closestDistance = std::min(closestDistance, teammateCorner.getDistanceTo(allienCorner));
 
-	return closestDistance;
+    return closestDistance;
 }
 
 bool State::isValidWorldPoint(const Point& p) const

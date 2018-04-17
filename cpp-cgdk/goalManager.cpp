@@ -35,26 +35,26 @@ void GoalManager::fillCurrentGoals()
         m_currentGoals.sort();
     }
 
-	if (!m_waitingInsetrion.empty())
-	{
-		// can't reorder goals if there is any goal which can't be paused right now
-		auto isGoalBusy = [](const GoalHolder& holder) { return !holder.m_goal->canPause(); };
-		bool isManagerBusy = std::find_if(m_currentGoals.begin(), m_currentGoals.end(), isGoalBusy) != m_currentGoals.end();
+    if (!m_waitingInsetrion.empty())
+    {
+        // can't reorder goals if there is any goal which can't be paused right now
+        auto isGoalBusy = [](const GoalHolder& holder) { return !holder.m_goal->canPause(); };
+        bool isManagerBusy = std::find_if(m_currentGoals.begin(), m_currentGoals.end(), isGoalBusy) != m_currentGoals.end();
 
-		if (!isManagerBusy)
-		{
-			m_currentGoals.splice(m_currentGoals.end(), m_waitingInsetrion);
-		}
+        if (!isManagerBusy)
+        {
+            m_currentGoals.splice(m_currentGoals.end(), m_waitingInsetrion);
+        }
 
-		m_currentGoals.sort();
-	}
+        m_currentGoals.sort();
+    }
 
     assert(std::is_sorted(m_currentGoals.begin(), m_currentGoals.end()) && "please keep goals sorted by-priority");
 }
 
 GoalManager::GoalManager(State& state) 
-	: m_state(state)
-	, m_forcedGoal(nullptr)
+    : m_state(state)
+    , m_forcedGoal(nullptr)
 {
 
 }
@@ -72,66 +72,66 @@ void GoalManager::tick()
 {
     fillCurrentGoals();
 
-	if (m_forcedGoal)
-	{
-		m_forcedGoal->performStep(*this, true);
+    if (m_forcedGoal)
+    {
+        m_forcedGoal->performStep(*this, true);
 
-		if (m_forcedGoal->isFinished())
-		{
-			auto forcedIt = std::find_if(m_currentGoals.begin(), m_currentGoals.end(), 
-				[this](const GoalHolder& holder) { return holder.m_goal.get() == m_forcedGoal; });
-			assert(forcedIt != m_currentGoals.end());
+        if (m_forcedGoal->isFinished())
+        {
+            auto forcedIt = std::find_if(m_currentGoals.begin(), m_currentGoals.end(), 
+                [this](const GoalHolder& holder) { return holder.m_goal.get() == m_forcedGoal; });
+            assert(forcedIt != m_currentGoals.end());
 
-			m_forcedGoal = nullptr;           // done, pause and remove
-			m_currentGoals.erase(forcedIt);
-		}
+            m_forcedGoal = nullptr;           // done, pause and remove
+            m_currentGoals.erase(forcedIt);
+        }
 
-		if (m_forcedGoal && m_forcedGoal->canPause())
-			m_forcedGoal = nullptr;           // just pause
-	}
+        if (m_forcedGoal && m_forcedGoal->canPause())
+            m_forcedGoal = nullptr;           // just pause
+    }
 
-	if (!m_state.isMoveCommitted())
-	{
-		if (!m_currentGoals.empty())
-		{
-			const GoalPtr& mostPriority = m_currentGoals.front().m_goal;
-			mostPriority->performStep(*this, false);
-			if (mostPriority->isFinished())
-			{
-				if (m_forcedGoal == m_currentGoals.front().m_goal.get())
-					m_forcedGoal = nullptr;
+    if (!m_state.isMoveCommitted())
+    {
+        if (!m_currentGoals.empty())
+        {
+            const GoalPtr& mostPriority = m_currentGoals.front().m_goal;
+            mostPriority->performStep(*this, false);
+            if (mostPriority->isFinished())
+            {
+                if (m_forcedGoal == m_currentGoals.front().m_goal.get())
+                    m_forcedGoal = nullptr;
 
-				m_currentGoals.pop_front();
-			}
-		}
-		else
-		{
-			NukeGoal dummy(m_state, *this);
-			dummy.performStep(*this, false);
-		}
-	}
+                m_currentGoals.pop_front();
+            }
+        }
+        else
+        {
+            NukeGoal dummy(m_state, *this);
+            dummy.performStep(*this, false);
+        }
+    }
 }
 
 void GoalManager::doMultitasking(const Goal* interruptedGoal)
 {
-	Goal* executedGoal = nullptr;
+    Goal* executedGoal = nullptr;
 
     for (const GoalHolder& goalHolder : m_currentGoals)
     {
-		const GoalPtr& goal = goalHolder.m_goal;
+        const GoalPtr& goal = goalHolder.m_goal;
         if (!goal->isEligibleForBackgroundMode(interruptedGoal))
             continue;
 
         goal->performStep(*this, true);
-		if (m_state.isMoveCommitted())
-		{
-			executedGoal = goal.get();
-			break;   // one tick - one move
-		}
+        if (m_state.isMoveCommitted())
+        {
+            executedGoal = goal.get();
+            break;   // one tick - one move
+        }
     }
 
-	if (executedGoal && !executedGoal->isFinished() && !executedGoal->canPause())
-		m_forcedGoal = executedGoal;
+    if (executedGoal && !executedGoal->isFinished() && !executedGoal->canPause())
+        m_forcedGoal = executedGoal;
 
     // purge finished goals
     m_currentGoals.remove_if([](const GoalHolder& holder) { return holder.m_goal->isFinished(); });

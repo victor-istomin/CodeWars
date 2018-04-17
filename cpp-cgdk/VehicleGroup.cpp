@@ -24,7 +24,7 @@ void VehicleGroup::update()
 
         healthSum += unit->getDurability();
 
-		maxRadius = std::max(maxRadius, unit->getRadius());
+        maxRadius = std::max(maxRadius, unit->getRadius());
     }
 
     center /= static_cast<double>(m_units.size());
@@ -32,7 +32,7 @@ void VehicleGroup::update()
     m_center        = center;
     m_rect          = rect.inflate(m_units.empty() ? 0.0 : m_units.front().lock()->getRadius());
     m_healthSum     = healthSum;
-	m_maxUnitRadius = maxRadius;
+    m_maxUnitRadius = maxRadius;
 }
 
 bool VehicleGroup::isPathFree(const Point& toCenter, const Obstacle& obstacle, double iterationSize, bool isRoughCalculation /*= false*/) const
@@ -57,39 +57,39 @@ bool VehicleGroup::isPathFree(const Point& toCenter, const Obstacle& obstacle, d
 
 bool VehicleGroup::willCollide(const Vec2d& thisDisplacement, const Obstacle& other, bool isRoughCalculation) const
 {
-	Rect intersection;
-	Rect actualRect = m_rect + thisDisplacement;
-	if (!actualRect.overlaps(other.rect(), intersection))
-		return false;
+    Rect intersection;
+    Rect actualRect = m_rect + thisDisplacement;
+    if (!actualRect.overlaps(other.rect(), intersection))
+        return false;
 
-	intersection = intersection.inflate(m_maxUnitRadius + other.maxUnitRadius());
+    intersection = intersection.inflate(m_maxUnitRadius + other.maxUnitRadius());
 
-	for (const VehicleCache& vehicleCache : m_units)
-	{
-		VehiclePtr vehicle = vehicleCache.lock();
-		Point actualCenter = Point(*vehicle) + thisDisplacement;
+    for (const VehicleCache& vehicleCache : m_units)
+    {
+        VehiclePtr vehicle = vehicleCache.lock();
+        Point actualCenter = Point(*vehicle) + thisDisplacement;
 
-		if (!intersection.contains(actualCenter))
-			continue;
+        if (!intersection.contains(actualCenter))
+            continue;
 
         for(size_t i = 0; i < other.getUnitsCount(); ++i)
-		{
+        {
             Point otherPoint = other.getUnitPoint(i);
-			if (!intersection.contains(otherPoint))
-				continue;
+            if (!intersection.contains(otherPoint))
+                continue;
 
             if (isRoughCalculation)
                 return true;
 
-			double squaredDistance = actualCenter.getSquareDistance(otherPoint);
-			double sqaredRadius    = Point::pow2(vehicle->getRadius() + other.getUnitRadius(i));
+            double squaredDistance = actualCenter.getSquareDistance(otherPoint);
+            double sqaredRadius    = Point::pow2(vehicle->getRadius() + other.getUnitRadius(i));
 
-			if (squaredDistance < sqaredRadius)
-				return true; 
-		}
-	}
+            if (squaredDistance < sqaredRadius)
+                return true; 
+        }
+    }
 
-	return false;
+    return false;
 }
 
 

@@ -77,7 +77,7 @@ struct VehicleGroup
     Point  m_center;
     Rect   m_rect;
     double m_healthSum;
-	double m_maxUnitRadius;
+    double m_maxUnitRadius;
     Point  m_plannedDestination;
 
     // TODO refactor: add getters/setters
