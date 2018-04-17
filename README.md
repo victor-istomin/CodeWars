@@ -4,7 +4,7 @@ Russian AI Cup 2017 solution
 This is mostly a sport-programming quality code which was written in a rush of competition. 
 However, it may be interesting as an example of solving tasks in case of limited time resources. 
 
-Due folder structure restrictions of RAIC, strategy code is implemeted within RAIC SDK folder. 
+Due to folder structure restrictions of RAIC, strategy code is implemeted within RAIC SDK folder. 
 
 There is short list of places of my code to start digging from: 
 
