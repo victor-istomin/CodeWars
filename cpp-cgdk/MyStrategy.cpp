@@ -11,9 +11,11 @@ using namespace std;
 
 void MyStrategy::move(const Player& me, const World& world, const Game& game, Move& move) 
 {
-    m_state.update(world, me, game, move);
+    m_state.updateBeforeMove(world, me, game, move);
 
     m_goalManager.tick();
+
+    m_state.updateAfterMove(world, me, game, move);
 }
 
 MyStrategy::MyStrategy()

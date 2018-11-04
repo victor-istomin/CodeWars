@@ -105,9 +105,19 @@ GoalDefendIfv::GoalDefendIfv(State& strategyState, GoalManager& goalManager)
     
     Callback abortCheckFn = [this]() { return abortCheck(); };
     Callback hasActionPointFn = [this]() { return state().hasActionPoint(); };
-    Callback canMoveHelicopters = [this]()
+    Callback canMoveHelicopters = [this, abortCheckFn, hasActionPointFn]()
     {
+        static const int MAX_WAIT_TIME = 500;
+
         bool isPathFree = helicopterGroup().isPathFree(tankGroup().m_center, Obstacle(fighterGroup()), m_helicopterIteration);
+        int ticksWaiting = state().world()->getTickIndex() - std::max(state().lastMoveTick(), m_waitTick);
+
+        // #todo - add blocking fighter to the helicopters group in ordert to resolve conflict?
+        if(!isPathFree && ticksWaiting > MAX_WAIT_TIME)
+        {
+            m_waitTick = state().world()->getTickIndex() + MAX_WAIT_TIME;
+            pushFirstStep(abortCheckFn, hasActionPointFn, [this]() { return shiftAircraft(); }, "defend ifv: additional shift aircraft", StepType::ALLOW_MULTITASK);
+        }
 
         return state().hasActionPoint() && isPathFree;
     };

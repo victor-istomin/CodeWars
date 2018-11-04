@@ -54,6 +54,7 @@ private:
     GroupByType   m_teammates;
     GroupByType   m_newTeammates;         // TODO: group by facility ID?
     bool          m_isMoveCommitted;
+    int           m_lastMoveTick;
 
     Rect m_teammatesRect;
     Rect m_alliensRect;
@@ -142,7 +143,7 @@ public:
     };
 
     State() : m_world(nullptr), m_game(nullptr), m_move(nullptr), m_player(nullptr), m_enemy(nullptr)
-            , m_isMoveCommitted(false), m_nuclearGuideGroup(nullptr) 
+            , m_isMoveCommitted(false), m_nuclearGuideGroup(nullptr), m_lastMoveTick(-1)
     {}
 
     Constants& constants() { return *m_constants; }
@@ -184,6 +185,7 @@ public:
     const FacilityById&    facilities() const                    { return m_facilities; }
     const model::Facility* facility(Id id) const                 { auto found = m_facilities.find(id); return found != m_facilities.end() ? &found->second : nullptr; }
 
+    int  lastMoveTick() const                                    { return m_lastMoveTick; }
     bool isMoveCommitted() const                                 { return m_isMoveCommitted; }
     bool hasActionPoint() const                                  { return player()->getRemainingActionCooldownTicks() == 0; }
     bool isCorrectPosition(const Point& p) const                 { return p.m_x >= 0 && p.m_y >= 0 && p.m_x <= m_game->getWorldWidth() && p.m_y <= m_game->getWorldHeight();}
@@ -200,7 +202,8 @@ public:
 
     bool isValidWorldPoint(const Point& p) const;
 
-    void update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move);
+    void updateBeforeMove(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move);
+    void updateAfterMove(const model::World& world, const model::Player& me, const model::Game& game, const model::Move& move);
 
     static void updateGroupsRect(const GroupByType& groupsMap, Rect& rect);
 

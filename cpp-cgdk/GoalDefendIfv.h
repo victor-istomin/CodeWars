@@ -11,7 +11,7 @@ namespace goals
         const double MIN_HEALTH_FACTOR = 0.02;
 
         const double m_helicopterIteration;  // size of movement emulation increment
-        //int          m_lastConflictTick = 0;
+        int          m_waitTick = 0;
 
         bool abortCheck() const;
         bool isTanksBeaten() const;

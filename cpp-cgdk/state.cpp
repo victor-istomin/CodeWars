@@ -10,7 +10,7 @@ const float State::EnemyStrategyStats::INCREMENT_DIVIDER = 2.0;
 const float State::EnemyStrategyStats::INCREMENT         = MAX_SCORE / INCREMENT_DIVIDER;   // so, limit will be MAX_SCORE
 
 
-void State::update(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)
+void State::updateBeforeMove(const model::World& world, const model::Player& me, const model::Game& game, model::Move& move)
 {
     assert(me.isMe());
     m_world  = &world;
@@ -35,6 +35,14 @@ void State::update(const model::World& world, const model::Player& me, const mod
     updateFacilities();
 
     updateEnemyStats();
+}
+
+void State::updateAfterMove(const model::World& world, const model::Player& me, const model::Game& game, const model::Move& move)
+{
+    if(move.getAction() != ActionType::NONE && move.getAction() != ActionType::_UNKNOWN_ && move.getAction() != ActionType::TACTICAL_NUCLEAR_STRIKE)
+    {
+        m_lastMoveTick = world.getTickIndex();
+    }
 }
 
 void State::updateGroups()

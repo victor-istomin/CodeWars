@@ -68,6 +68,16 @@ protected:
             m_steps.emplace(++m_steps.begin(), std::make_unique<Step>(std::forward<Args>(args)...));
     }
 
+    template <typename... Args>
+    void pushFirstStep(Args&&... args)
+    {
+        if(m_steps.empty())
+            pushBackStep(std::forward<Args>(args)...);
+        else
+            m_steps.emplace_front(std::make_unique<Step>(std::forward<Args>(args)...));
+    }
+
+
     State& state()                                { return m_state; }
     const State& state() const                    { return m_state; }
     GoalManager& goalManager()                    { return m_goalManager; }
