@@ -120,6 +120,9 @@
     <ClCompile Include="GoalProduceVehicles.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DebugOut.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyStrategy.h">
@@ -243,6 +246,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GoalProduceVehicles.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DebugOut.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RewindClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

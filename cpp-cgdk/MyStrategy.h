@@ -6,6 +6,7 @@
 #include "Strategy.h"
 #include "state.h"
 #include "goalManager.h"
+#include "DebugOut.h"
 
 class MyStrategy : public Strategy {
 public:
@@ -16,6 +17,7 @@ public:
 private:
     State       m_state;
     GoalManager m_goalManager;
+    DebugOut    m_debug;
 };
 
 #endif

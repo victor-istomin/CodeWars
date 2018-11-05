@@ -7,3 +7,6 @@
 [submodule "Tutorial"]
 	path = Tutorial
 	url = git@github.com:Russian-AI-Cup-2017/Tutorial.git
+[submodule "rewind-viewer"]
+	path = rewind-viewer
+	url = git@github.com:kswaldemar/rewind-viewer.git
