@@ -254,5 +254,8 @@
     <ClInclude Include="RewindClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PotentialField.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
