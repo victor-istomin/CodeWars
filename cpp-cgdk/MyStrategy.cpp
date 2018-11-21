@@ -16,8 +16,8 @@ void MyStrategy::move(const Player& me, const World& world, const Game& game, Mo
     m_goalManager.tick();
 
     m_state.updateAfterMove(world, me, game, move);
-    m_debug.drawVehicles(m_state.getAllVehicles(), me);
-    m_debug.commitFrame();
+    //m_debug.drawVehicles(m_state.getAllVehicles(), me);
+    //m_debug.commitFrame();
 }
 
 MyStrategy::MyStrategy()

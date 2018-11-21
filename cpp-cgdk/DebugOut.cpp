@@ -2,6 +2,8 @@
 #include "RewindClient.h"
 #include "model/Vehicle.h"
 
+#include <iostream>
+
 using namespace model;
 
 DebugOut::DebugOut()
@@ -64,9 +66,32 @@ void DebugOut::drawVehicles(const State::VehicleByID& vehicles, const model::Pla
 #endif // VISUALIZER
 }
 
+void DebugOut::drawNuke(const Point& nuke, const VehiclePtr& guide, const State& state)
+{
+#ifdef VISUALIZER
+    RewindClient::instance().circle(nuke.m_x, nuke.m_y, state.game()->getTacticalNuclearStrikeRadius(), RewindClient::rgba(0xFF, 0x88, 0x00, 0x88), 5);
+    RewindClient::instance().circle(guide->getX(), guide->getY(), guide->getRadius() / 2, RewindClient::rgba(0xFF, 0x88, 0x00, 0x88), 5);
+    RewindClient::instance().line(nuke.m_x, nuke.m_y, guide->getX(), guide->getY(), RewindClient::rgba(0xFF, 0x88, 0x00, 0x88), 5);
+
+#endif // VISUALIZER
+
+}
+
 void DebugOut::commitFrame()
 {
 #ifdef VISUALIZER
     RewindClient::instance().end_frame();
 #endif // VISUALIZER
+}
+
+DebugTimer::~DebugTimer()
+{
+    for(const auto& nameInfoPair : m_events)
+    {
+        std::cout << nameInfoPair.first << ": total=" << nameInfoPair.second.events << "; time=" << nameInfoPair.second.totalTime
+                  << "; avg=" << static_cast<double>(nameInfoPair.second.totalTime) / nameInfoPair.second.events << std::endl;
+    }
+
+    ::MessageBox(0, "done", "done", 0);
+    // std::cout << "Done\n";
 }

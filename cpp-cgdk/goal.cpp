@@ -64,6 +64,12 @@ bool Goal::checkNuclearLaunch()
     static const double LOOKUP_RANGE = 10 * m_state.game()->getFighterSpeed() + m_state.game()->getFighterVisionRange() 
                                           + m_state.game()->getTacticalNuclearStrikeRadius();
 
+    // #todo - remove hack
+    static int s_lastCheckIndex = 0;
+    if(s_lastCheckIndex == state().world()->getTickIndex())
+        return false;
+    s_lastCheckIndex = state().world()->getTickIndex();
+
     if (!m_state.isMoveCommitted()
         && m_state.getDistanceToAlliensRect() < LOOKUP_RANGE
         && m_state.player()->getRemainingNuclearStrikeCooldownTicks() == 0)
@@ -71,6 +77,10 @@ bool Goal::checkNuclearLaunch()
         const auto& allVehicles = state().getAllVehicles();
 
         Rect reachableRect = state().getTeammatesRect().inflate(LOOKUP_RANGE);
+        reachableRect.m_topLeft.m_x     = std::max(0.0, reachableRect.m_topLeft.m_x);
+        reachableRect.m_topLeft.m_y     = std::max(0.0, reachableRect.m_topLeft.m_y);
+        reachableRect.m_bottomRight.m_x = std::min(state().world()->getWidth(),  reachableRect.m_bottomRight.m_x);
+        reachableRect.m_bottomRight.m_y = std::min(state().world()->getHeight(), reachableRect.m_bottomRight.m_y);
 
         std::map<double, VehiclePtr> nukeDamageMap;
 
@@ -119,70 +129,15 @@ bool Goal::checkNuclearLaunch()
             }
         }
 
-        constexpr const int DRAFT_CELLS_COUNT = 10;
-        auto alignSize = [DRAFT_CELLS_COUNT](double size) 
-        { 
-            return static_cast<int>(std::ceil(size / DRAFT_CELLS_COUNT)) * DRAFT_CELLS_COUNT;
-        };
 
         // fill reachable spots with positive values
-        PotentialField<uint8_t> reachabilityTeam(alignSize(reachableRect.width()), alignSize(reachableRect.height()), DRAFT_CELLS_COUNT);
-        PotentialField<uint8_t> affectEnemy(alignSize(reachableRect.width()), alignSize(reachableRect.height()), DRAFT_CELLS_COUNT);
-        Point fieldsDxDy = reachableRect.m_topLeft;
-        
-        reachabilityTeam.apply(teammatesHighHp, 
-            [fieldsDxDy, nukeRadius](const VehiclePtr& teammate, uint8_t isReachable, int cellX, int cellY, const auto& pf)
-        {
-            if(isReachable)
-                return isReachable;
+        auto damageField = getDamageField(reachableRect, teammates, teammatesHighHp, reachableAlliens);
 
-            Point cellPoint = fieldsDxDy + Point(cellX, cellY);
-            double maxDistance = teammate->getVisionRange() + nukeRadius + std::max(pf.cellWidth(), pf.cellHeight()) / 2;
-            double maxSquare = maxDistance * maxDistance;
-
-            return static_cast<uint8_t>( (cellPoint.getSquareDistance(*teammate) < maxSquare) ? 1 : 0 );
-        });
-
-        DebugOut debug;
-//         debug.drawPotentialField(fieldsDxDy, reachabilityTeam, 0,
-//             [](uint8_t isReachable) { return isReachable ? RewindClient::rgba(0xFF, 0x88, 0x88, 0xA8) : RewindClient::rgba(0xFF, 0xFF, 0xFF, 0x88); });
-
-        double nukeRadiusSqare = nukeRadius + std::max(affectEnemy.cellWidth(), affectEnemy.cellHeight()) / 2;
-        nukeRadiusSqare *= nukeRadiusSqare;
-
-        affectEnemy.apply(reachableAlliens, 
-            [fieldsDxDy, nukeRadiusSqare](const VehiclePtr& enemy, uint8_t isReachable, int cellX, int cellY, const auto& dummy)
-        {
-            if(isReachable)
-                return isReachable;
-
-            Point cellPoint = fieldsDxDy + Point(cellX, cellY);
-            return static_cast<uint8_t>( (cellPoint.getSquareDistance(*enemy) < nukeRadiusSqare) ? 1 : 0 );
-        });
-
-//         debug.drawPotentialField(fieldsDxDy, affectEnemy, 1,
-//             [](uint8_t isReachable) { return isReachable ? RewindClient::rgba(0x88, 0x88, 0xFF, 0xA8) : RewindClient::rgba(0xFF, 0xFF, 0xFF, 0x88); });
-
-        reachabilityTeam.apply(affectEnemy, [](uint8_t isTeam, uint8_t isEnemy) { return isTeam * isEnemy; });
-        debug.drawPotentialField(fieldsDxDy, reachabilityTeam, 0,
-            [](uint8_t isReachable) { return isReachable ? RewindClient::rgba(0xFF, 0x88, 0x88, 0xA8) : RewindClient::rgba(0xFF, 0xFF, 0xFF, 0x88); });
 
         static const double MIN_DAMAGE = 90;
 
 // 
-//         damageMap.apply(teammates, [&getDamage, &enemyNuke, &fieldDxDy, ticksToEnemyNuke]
-//                                    (const VehiclePtr& teammate, int cellScore, int cellX, int cellY, const PotentialField<>& field) 
-//         {
-//             //#todo - move outside
-//             const double enemyNukeDamage = enemyNuke != Point() ? getDamage(enemyNuke, *teammate, 1.0) + ticksToEnemyNuke / 2 : 0;
-//             const double healthThreshold = std::max(MIN_HEALTH, enemyNukeDamage);
-//             if(teammate->getDurability() <= healthThreshold)
-//                 return cellScore;   // no bonus, teammate is about to go :(
-// 
-//             Point cellPos = fieldDxDy + Point(cellX, cellY);
-//             int bonus = cellPos.getSquareDistance(*teammate) < teammate->getSquaredVisionRange() ? 1 : 0;
-//             return cellScore + bonus;
-//         });
+
 
         for (const VehiclePtr& teammate : teammates)
         {
@@ -261,11 +216,110 @@ bool Goal::checkNuclearLaunch()
         // sort DESC by damage
         std::stable_sort(targets.begin(), targets.end(), [](const DamageInfo& a, const DamageInfo& b) { return a.m_damage > b.m_damage; });
 
+        DebugOut debug;
+
         if (!targets.empty())
         {
             state().setNukeAction(targets.front().m_point, *targets.front().m_guide);
+            debug.drawNuke(targets.front().m_point, targets.front().m_guide, m_state);
         }
+
+        /**/
+        debug.drawVehicles(state().getAllVehicles(), *state().player());
+        debug.commitFrame();
+        /**/
+
     }
 
     return m_state.isMoveCommitted();
+}
+
+Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vector<VehiclePtr>& teammates, const std::vector<VehiclePtr>& teammatesHighHp, const std::vector<VehiclePtr>& reachableAlliens)
+{
+    clock_t dbg_startTime = clock();
+    DamageField affectEnemyField ((int)reachableRect.width(), (int)reachableRect.height(), reachableRect.m_topLeft);
+
+    Point fieldsDxDy        = reachableRect.m_topLeft;
+    const double cellHypot  = std::hypot(affectEnemyField.cellWidth() / 2, affectEnemyField.cellHeight() / 2);
+    const double nukeRadius = m_state.game()->getTacticalNuclearStrikeRadius() + cellHypot;
+
+    // fill each reachable by teammate cell with '1'
+    affectEnemyField.apply(teammatesHighHp,
+        [nukeRadius](const VehiclePtr& teammate, uint16_t isReachable, const Point& cellCenter, const auto& pf)
+    {
+        if(isReachable)
+            return isReachable;
+
+        double maxDistance = teammate->getVisionRange() + nukeRadius;
+        double maxSquare = maxDistance * maxDistance;
+
+        return static_cast<uint16_t>((cellCenter.getSquareDistance(*teammate) < maxSquare) ? 1 : 0);
+    });
+
+    auto pow2 = [](auto x) { return x * x; };
+    const double nukeRadiusSqare = pow2(nukeRadius);
+    const double maxDamage = m_state.game()->getMaxTacticalNuclearStrikeDamage();
+
+    // fill each cell which can affect enemy
+    affectEnemyField.apply(reachableAlliens,
+        [nukeRadiusSqare, maxDamage]
+    (const VehiclePtr& enemy, uint16_t score, const Point& cellCenter, const auto& dummy)
+    {
+        if(score == 0)
+            return score;   // cell is not reachable by teammates
+
+        double distanceSquare = cellCenter.getSquareDistance(*enemy);
+        if(distanceSquare >= nukeRadiusSqare)
+            return score;
+
+        double thisDamage = (nukeRadiusSqare - distanceSquare) * maxDamage / nukeRadiusSqare;
+
+        int newScore = score + static_cast<int>(thisDamage);
+        if(newScore > std::numeric_limits<decltype(score)>::max())
+            newScore = std::numeric_limits<decltype(score)>::max();
+
+        return static_cast<decltype(score)>(newScore);
+    });
+
+    // add a penalty for friendly-fire
+    affectEnemyField.apply(teammates,
+        [nukeRadiusSqare, maxDamage](const VehiclePtr& teammate, uint16_t score, const Point& cellCenter, const auto& pf)
+    {
+        if(score <= 1)
+            return score;    // no sense to drop nuke here
+
+        double distanceSquare = cellCenter.getSquareDistance(*teammate);
+        if(distanceSquare >= nukeRadiusSqare)
+            return score;
+
+        constexpr int PENALTY = -2;
+        double thisDamage = PENALTY * (nukeRadiusSqare - distanceSquare) * maxDamage / nukeRadiusSqare;
+
+        int newScore = score + static_cast<int>(thisDamage);
+        if(newScore < 1)
+            newScore = 0;
+
+        return static_cast<decltype(score)>(newScore);
+    });
+
+    DebugTimer::instance().addEvent(__FUNCTION__, clock() - dbg_startTime);
+
+    DebugOut debug;
+
+    debug.drawPotentialField(fieldsDxDy, affectEnemyField, 2,
+        [](uint16_t damage) 
+    { 
+        uint8_t value = std::min(damage / 32, 0xFF);
+
+        int rb = std::max(0, 0x88 - value);
+        int a  = std::max(0x78, 0xD8 - (value * 0x50 / 0xFF));
+
+        auto color = damage ? RewindClient::rgba(rb, 0xFF, rb, a) : RewindClient::rgba(0x55, 0x55, 0x55, 0x88);
+        if (damage == 1)
+            color = RewindClient::rgba(0xFF, 0xFF, 0xFF, 0x88);
+
+        return color;
+    });
+
+    return affectEnemyField;
 }

@@ -4,6 +4,7 @@
 #include <list>
 #include "forwardDeclarations.h"
 #include "state.h"
+#include "PotentialField.h"
 
 class Goal
 {
@@ -47,6 +48,12 @@ private:
     void doMultitasking(GoalManager &goalManager);
     bool isNoMoveComitted();
     bool checkNuclearLaunch();
+
+    static constexpr const int DRAFT_CELLS_COUNT = 16;
+
+    using DamageField       = PotentialField<uint16_t, Point, DRAFT_CELLS_COUNT>;
+
+    DamageField getDamageField(const Rect &reachableRect, const std::vector<VehiclePtr>& teammates, const std::vector<VehiclePtr>& teammatesHighHp, const std::vector<VehiclePtr>& reachableAlliens);
 
     // check if this goal could be performed in multitasking mode when 'interrupted' has nothing to do right now
     virtual bool isCompatibleWith(const Goal* interrupted) { return false; }
