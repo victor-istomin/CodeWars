@@ -15,6 +15,7 @@ public:
 
     void drawVehicles(const State::VehicleByID& vehicles, const model::Player& me);
     void drawNuke(const Point& nuke, const VehiclePtr& guide, const State& state);
+    void drawRect(const Rect& rect, uint32_t color);
 
     template <typename TPotentialField, typename ValToColor>
     void drawPotentialField(const Point& dxdy, const TPotentialField& field, size_t layer, ValToColor&& getColor)

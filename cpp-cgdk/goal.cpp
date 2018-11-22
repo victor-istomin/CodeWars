@@ -2,6 +2,7 @@
 #include "goalManager.h"
 #include "PotentialField.h"
 #include "DebugOut.h"
+#include <array>
 
 #undef min
 #undef max
@@ -131,12 +132,55 @@ bool Goal::checkNuclearLaunch()
 
 
         // fill reachable spots with positive values
-        auto damageField = getDamageField(reachableRect, teammates, teammatesHighHp, reachableAlliens);
+        DamageField damageField = getDamageField(reachableRect, teammates, teammatesHighHp, reachableAlliens);
 
+        constexpr double MIN_DAMAGE = 90;
+        constexpr size_t MAX_CELLS  = 10;
+        auto bestScores = damageField.getBestN<MAX_CELLS>();
 
-        static const double MIN_DAMAGE = 90;
+        std::vector<DamageField::Cell> bestCells;
+        std::copy_if(bestScores.begin(), bestScores.end(), std::back_inserter(bestCells), [](const auto& cell) {return cell.score >= 1000; });
 
-// 
+        if(bestCells.empty())
+            return false;
+
+        auto cellToRect = [&damageField](const DamageField::Cell& cell) 
+        { 
+            return Rect{ damageField.cellTopLeftToWorld(cell.index), damageField.cellTopLeftToWorld(cell.index)
+                                                                     + Point { (double)damageField.cellWidth(), (double)damageField.cellHeight() } };
+        };
+
+        Rect optimizedRect = cellToRect(bestCells.front());
+        for(const auto& cell : bestCells)
+        {
+            optimizedRect.ensureContains(cellToRect(cell));
+        }
+
+        auto drawDamage = [](size_t layer, Rect rect, const DamageField& field)
+        {
+            DebugOut debug;
+
+            debug.drawPotentialField(rect.m_topLeft, field, layer,
+                [](uint16_t damage)
+            {
+                uint8_t value = std::min(damage / 32, 0xFF);
+
+                int rb = std::max(0, 0x88 - value);
+                int a = std::max(0x78, 0xD8 - (value * 0x50 / 0xFF));
+
+                auto color = damage ? RewindClient::rgba(rb, 0xFF, rb, a) : RewindClient::rgba(0x55, 0x55, 0x55, 0x88);
+                if(damage == 1)
+                    color = RewindClient::rgba(0xFF, 0xFF, 0xFF, 0x88);
+
+                return color;
+            });
+        };
+
+        // second iteration
+        // #todo - filter out unreachable enemies
+        DamageField damageFieldOptimized = getDamageField(optimizedRect, teammates, teammatesHighHp, reachableAlliens);
+        drawDamage(1, reachableRect, damageField);
+        drawDamage(2, optimizedRect, damageFieldOptimized);
 
 
         for (const VehiclePtr& teammate : teammates)
@@ -217,6 +261,7 @@ bool Goal::checkNuclearLaunch()
         std::stable_sort(targets.begin(), targets.end(), [](const DamageInfo& a, const DamageInfo& b) { return a.m_damage > b.m_damage; });
 
         DebugOut debug;
+        debug.drawRect(optimizedRect, RewindClient::rgba(0xFF, 0, 0, 0x20));
 
         if (!targets.empty())
         {
@@ -262,7 +307,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
     // fill each cell which can affect enemy
     affectEnemyField.apply(reachableAlliens,
-        [nukeRadiusSqare, maxDamage]
+        [&nukeRadiusSqare, &maxDamage, &nukeRadius/**/]
     (const VehiclePtr& enemy, uint16_t score, const Point& cellCenter, const auto& dummy)
     {
         if(score == 0)
@@ -272,7 +317,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
         if(distanceSquare >= nukeRadiusSqare)
             return score;
 
-        double thisDamage = (nukeRadiusSqare - distanceSquare) * maxDamage / nukeRadiusSqare;
+		double thisDamage = (nukeRadius - sqrt(distanceSquare)) * maxDamage / nukeRadius;
 
         int newScore = score + static_cast<int>(thisDamage);
         if(newScore > std::numeric_limits<decltype(score)>::max())
@@ -283,7 +328,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
     // add a penalty for friendly-fire
     affectEnemyField.apply(teammates,
-        [nukeRadiusSqare, maxDamage](const VehiclePtr& teammate, uint16_t score, const Point& cellCenter, const auto& pf)
+        [&nukeRadiusSqare, &maxDamage, &nukeRadius/**/](const VehiclePtr& teammate, uint16_t score, const Point& cellCenter, const auto& pf)
     {
         if(score <= 1)
             return score;    // no sense to drop nuke here
@@ -293,7 +338,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
             return score;
 
         constexpr int PENALTY = -2;
-        double thisDamage = PENALTY * (nukeRadiusSqare - distanceSquare) * maxDamage / nukeRadiusSqare;
+		double thisDamage = PENALTY * (nukeRadius - sqrt(distanceSquare)) * maxDamage / nukeRadius;
 
         int newScore = score + static_cast<int>(thisDamage);
         if(newScore < 1)
@@ -303,23 +348,6 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
     });
 
     DebugTimer::instance().addEvent(__FUNCTION__, clock() - dbg_startTime);
-
-    DebugOut debug;
-
-    debug.drawPotentialField(fieldsDxDy, affectEnemyField, 2,
-        [](uint16_t damage) 
-    { 
-        uint8_t value = std::min(damage / 32, 0xFF);
-
-        int rb = std::max(0, 0x88 - value);
-        int a  = std::max(0x78, 0xD8 - (value * 0x50 / 0xFF));
-
-        auto color = damage ? RewindClient::rgba(rb, 0xFF, rb, a) : RewindClient::rgba(0x55, 0x55, 0x55, 0x88);
-        if (damage == 1)
-            color = RewindClient::rgba(0xFF, 0xFF, 0xFF, 0x88);
-
-        return color;
-    });
 
     return affectEnemyField;
 }

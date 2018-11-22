@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <array>
 #include <limits>
 
 #include <cstdint>
@@ -14,7 +15,6 @@ constexpr bool isPotentialField(const T&) { return false; }
 
 template <>
 constexpr bool isPotentialField(const TagIsPotentialField&) { return true; }
-
 
 template <typename Score, typename Point, int CellsBySide>
 class PotentialField : public TagIsPotentialField
@@ -60,6 +60,7 @@ public:
     {
     }
 
+    // #todo - cache
     Point cellCenterToWorld (const Index& index) const { return m_dxdyCellCenter + Point(index.x * m_cellWidth, index.y * m_cellHeight); }
     Point cellTopLeftToWorld(const Index& index) const { return m_dxdy + Point(index.x * m_cellWidth, index.y * m_cellHeight); }
     
@@ -104,25 +105,6 @@ public:
         }
     }
 
-//     // Functor = f(int indexX, int indexY, Score cellScore, const PotentialField& field)
-//     // for each cell: cellScore = f(...);
-//     template <typename Functor>
-//     void apply(Functor&& f)
-//     {
-//         int cellX = 0;
-//         int cellY = 0;
-//         for(Score& score : m_cells)
-//         {
-//             score = f(cellX, cellY, score, *this);
-// 
-//             if(++cellX == CellsBySide)
-//             {
-//                 cellX = 0;
-//                 ++cellY;
-//             }
-//         }
-//     }
-
     // Functor = f(Index cellIndex, Score cellScore, const PotentialField& field)
     // for each cell: f(...);
     template <typename Functor>
@@ -136,10 +118,9 @@ public:
         }
     }
 
-    struct Cell   // #todo - reuse index
+    struct Cell
     {
-        int   x     = 0;
-        int   y     = 0;
+        Index index;
         Score score = std::numeric_limits<Score>::lowest();
     };
 
@@ -147,32 +128,41 @@ public:
     std::array<Cell, N> getBestN() const
     {
         std::array<const Score*, N> bestPointers;
+        bestPointers.fill(nullptr);
 
-        for(auto it = std::begin(cells); it != std::end(cells); ++it)
+        for(auto it = m_cells.begin(); it != m_cells.end(); ++it)
         {
             const Score& cellScore = *it;
 
-            constexpr const size_t end = N + 1;
+            constexpr const size_t end = N;
             int pos = end;
 
-            for(int i = N; i >= 0 && *bestPointers[i] < cellScore; --i)
+            for(int i = N - 1; i >= 0 && (bestPointers[i] == nullptr || *bestPointers[i] < cellScore); --i)
             {
                 pos = i;
             }
 
-            if(pos < end)
+            if(pos == (N - 1))
             {
-                std::memmove(&bestPointers[pos + 1], &bestPointers[pos], sizeof(Cell) * (N - pos - 1));   // shift 'tail'
+                bestPointers[pos] = &cellScore;
+            }
+            else if(pos < (N - 1))
+            {
+                std::memmove(&bestPointers[pos + 1], &bestPointers[pos], sizeof(bestPointers.front()) * (N - pos - 1));   // shift 'tail'
                 bestPointers[pos] = &cellScore;
             }
         }
 
         std::array<Cell, N> best;
+        best.fill(Cell());
         for(size_t i = 0; i < bestPointers.size(); ++i)
         {
             const Score* ptr = bestPointers[i];
-            ptrdiff_t pos = ptr - std::begin(m_cells);
-            best[i] = Cell{ pos % CellsBySide, pos / CellsBySide, *ptr };
+            if(ptr != nullptr)
+            {
+                int pos = static_cast<int>(ptr - m_cells.data());
+                best[i] = Cell{ Index { pos % CellsBySide, pos / CellsBySide }, *ptr };
+            }
         }
 
         return best;

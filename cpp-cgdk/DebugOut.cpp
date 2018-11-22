@@ -77,6 +77,11 @@ void DebugOut::drawNuke(const Point& nuke, const VehiclePtr& guide, const State&
 
 }
 
+void DebugOut::drawRect(const Rect& rect, uint32_t color)
+{
+    RewindClient::instance().rect(rect.bottomLeft().m_x, rect.bottomLeft().m_y, rect.topRight().m_x, rect.topRight().m_y, color);
+}
+
 void DebugOut::commitFrame()
 {
 #ifdef VISUALIZER
