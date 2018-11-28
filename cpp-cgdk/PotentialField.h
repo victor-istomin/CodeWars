@@ -99,7 +99,7 @@ public:
         for(Score& score : m_cells)
         {
             for(const auto& item : collection)
-                score = f(item, score, cellCenterToWorld(index), *this);
+                score = f(item, score, cellCenterToWorld(index), *this);          //#todo - optimize out 'cellCenterToWorld'
 
             ++index;
         }

@@ -130,32 +130,6 @@ bool Goal::checkNuclearLaunch()
             }
         }
 
-
-        // fill reachable spots with positive values
-        DamageField damageField = getDamageField(reachableRect, teammates, teammatesHighHp, reachableAlliens);
-
-        constexpr double MIN_DAMAGE = 90;
-        constexpr size_t MAX_CELLS  = 10;
-        auto bestScores = damageField.getBestN<MAX_CELLS>();
-
-        std::vector<DamageField::Cell> bestCells;
-        std::copy_if(bestScores.begin(), bestScores.end(), std::back_inserter(bestCells), [](const auto& cell) {return cell.score >= 1000; });
-
-        if(bestCells.empty())
-            return false;
-
-        auto cellToRect = [&damageField](const DamageField::Cell& cell) 
-        { 
-            return Rect{ damageField.cellTopLeftToWorld(cell.index), damageField.cellTopLeftToWorld(cell.index)
-                                                                     + Point { (double)damageField.cellWidth(), (double)damageField.cellHeight() } };
-        };
-
-        Rect optimizedRect = cellToRect(bestCells.front());
-        for(const auto& cell : bestCells)
-        {
-            optimizedRect.ensureContains(cellToRect(cell));
-        }
-
         auto drawDamage = [](size_t layer, Rect rect, const DamageField& field)
         {
             DebugOut debug;
@@ -176,12 +150,78 @@ bool Goal::checkNuclearLaunch()
             });
         };
 
+
+        // fill reachable spots with positive values
+        DamageField damageField = getDamageField(reachableRect, teammates, teammatesHighHp, reachableAlliens);
+
+        constexpr double MIN_DAMAGE = 200;
+        constexpr size_t MAX_CELLS  = 10;
+        auto bestScores = damageField.getBestN<MAX_CELLS>();
+
+        std::vector<DamageField::Cell> bestCells;
+        std::copy_if(bestScores.begin(), bestScores.end(), std::back_inserter(bestCells), [MIN_DAMAGE](const auto& cell) {return cell.score >= MIN_DAMAGE; });
+
+        if(bestCells.empty())
+            return false;
+
+
+
+
         // second iteration
         // #todo - filter out unreachable enemies
-        DamageField damageFieldOptimized = getDamageField(optimizedRect, teammates, teammatesHighHp, reachableAlliens);
-        drawDamage(1, reachableRect, damageField);
-        drawDamage(2, optimizedRect, damageFieldOptimized);
 
+        auto cellToRect = [](const DamageField& damageField, const DamageField::Cell& cell)
+        {
+            return Rect{ damageField.cellTopLeftToWorld(cell.index), damageField.cellTopLeftToWorld(cell.index)
+                                                                     + Point { (double)damageField.cellWidth(), (double)damageField.cellHeight() } };
+        };
+
+        // #todo - looks ugly
+        drawDamage(1, reachableRect, damageField);
+        auto optimizedField = std::make_unique<DamageField>(std::move(damageField));
+
+        for(int i = 0; i < 3; ++i)
+        {
+            Rect optimizedRect = cellToRect(*optimizedField, bestCells.front());
+            for(const auto& cell : bestCells)
+            {
+                optimizedRect.ensureContains(cellToRect(*optimizedField, cell));
+            }
+
+            // avoid rounding errors
+            bool isTiny = (optimizedRect.width() < DRAFT_CELLS_COUNT || optimizedRect.height() < DRAFT_CELLS_COUNT);
+            if(isTiny)
+            {
+                optimizedRect.ensureContains(Rect{ optimizedRect.m_topLeft,
+                                                   optimizedRect.m_topLeft + Point {(double)DRAFT_CELLS_COUNT, (double)DRAFT_CELLS_COUNT} });
+            }
+
+            //#todo - std::move()?
+            optimizedField = std::make_unique<DamageField>(getDamageField(optimizedRect, teammates, teammatesHighHp, reachableAlliens));
+
+            auto bests = optimizedField->getBestN<MAX_CELLS / 2>();
+            bestCells.clear();
+            std::copy_if(bests.begin(), bests.end(), std::back_inserter(bestCells), [MIN_DAMAGE](const auto& cell) {return cell.score >= MIN_DAMAGE; });
+            if(bestCells.empty())
+                return false;
+
+            if(isTiny)
+                break;
+        }
+
+        /* *** debug only */
+        Rect optimizedRect = cellToRect(*optimizedField, bestCells.front());
+        for(const auto& cell : bestCells)
+        {
+            optimizedRect.ensureContains(cellToRect(*optimizedField, cell));
+        }
+
+        /*****/
+
+
+        drawDamage(2, optimizedRect, *optimizedField);
+        if(bestCells.empty())
+            return false;
 
         for (const VehiclePtr& teammate : teammates)
         {
@@ -261,7 +301,7 @@ bool Goal::checkNuclearLaunch()
         std::stable_sort(targets.begin(), targets.end(), [](const DamageInfo& a, const DamageInfo& b) { return a.m_damage > b.m_damage; });
 
         DebugOut debug;
-        debug.drawRect(optimizedRect, RewindClient::rgba(0xFF, 0, 0, 0x20));
+//         debug.drawRect(optimizedRect, RewindClient::rgba(0xFF, 0, 0, 0x20));
 
         if (!targets.empty())
         {
