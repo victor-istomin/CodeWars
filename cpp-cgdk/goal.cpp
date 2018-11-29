@@ -177,8 +177,7 @@ bool Goal::checkNuclearLaunch()
         };
 
         // #todo - looks ugly
-        drawDamage(1, reachableRect, damageField);
-        auto optimizedField = std::make_unique<DamageField>(std::move(damageField));
+        auto optimizedField = std::make_unique<DamageField>(damageField);
 
         for(int i = 0; i < 3; ++i)
         {
@@ -219,29 +218,13 @@ bool Goal::checkNuclearLaunch()
         /*****/
 
 
-        drawDamage(2, optimizedRect, *optimizedField);
         if(bestCells.empty())
             return false;
 
-        for (const VehiclePtr& teammate : teammates)
-        {
-            static const double MIN_HEALTH = 0.5 * 100;   // #todo - remove duplicate
+        DebugOut debug;
+        drawDamage(1, reachableRect, damageField);
+        drawDamage(2, optimizedRect, *optimizedField);
 
-            const double enemyNukeDamage = enemyNuke != Point() ? getDamage(enemyNuke, *teammate, 1.0) + ticksToEnemyNuke / 2 : 0;
-            const double healthThreshold = std::max(MIN_HEALTH, enemyNukeDamage);
-            if (teammate->getDurability() <= healthThreshold)
-                continue;   // teammate is about to go :(
-
-            double damage = 0;
-            double sqaredVr = teammate->getSquaredVisionRange();
-
-            for (const VehiclePtr& enemy : reachableAlliens)
-                if (teammate->getSquaredDistanceTo(*enemy) < sqaredVr)
-                    damage += enemy->getDurability() * (enemy->getDurability() > MIN_HEALTH ? 1 : 2);
-
-            if (damage >= MIN_DAMAGE)
-                nukeDamageMap[damage] = teammate;
-        }
 
         struct DamageInfo
         {
@@ -252,46 +235,27 @@ bool Goal::checkNuclearLaunch()
             DamageInfo(const Point& p, double damage, const VehiclePtr& guide) : m_point(p), m_damage(damage), m_guide(guide) {}
         };
 
-        static const int LOOKUP_ITEMS_LIMIT = 50;
         std::vector<DamageInfo> targets;
-        targets.reserve(LOOKUP_ITEMS_LIMIT);
+        targets.reserve(teammatesHighHp.size());
 
-        int lookupItemsLeft = LOOKUP_ITEMS_LIMIT;
-        for (auto itDamage = nukeDamageMap.rbegin(); itDamage != nukeDamageMap.rend() && lookupItemsLeft > 0; ++itDamage, --lookupItemsLeft)
+        auto pow2 = [](auto x) { return x * x; };
+        for(const DamageField::Cell& cell : bestCells)
         {
-            auto teammate = itDamage->second;
+            Point cellCenter = optimizedField->cellCenterToWorld(cell.index);
 
-            DamageInfo bestDamage{ Point(), 0, teammate };
-
-            // TODO - predict terrain where this unit will go next 30 ticks!
-
-            double rangeGap = teammate->getRadius();
-            double visionRange = state().getUnitVisionRange(*teammate) - 2 * teammate->getRadius() - rangeGap; 
-            double squaredVR = visionRange * visionRange;
-
-            // TODO - add hitpoints in the middle of alliens or something similar
-
-            for (const VehiclePtr& hitPoint : reachableAlliens)
+            for(const VehiclePtr& teammate : teammatesHighHp)
             {
-                if (teammate->getSquaredDistanceTo(*hitPoint) > squaredVR)
+                if(cellCenter.getSquareDistance(*teammate) >= pow2(teammate->getVisionRange() * VISION_RANGE_HANDICAP))
                     continue;
 
-                double damage = 0;
-                for (const VehiclePtr& enemy : reachableAlliens)
-                    damage += getDamage(*hitPoint, *enemy);
-
-                for (const VehiclePtr& friendly : teammates)
-                    damage += getDamage(*hitPoint, *friendly);
-
-                if (bestDamage.m_damage < damage)
-                {
-                    bestDamage.m_damage = damage;
-                    bestDamage.m_point = *hitPoint;
-                }
+                targets.emplace_back(DamageInfo{ cellCenter, (double)cell.score, teammate });  // ordered by teammate HP
             }
+        }
 
-            if (bestDamage.m_damage > 0)
-                targets.emplace_back(bestDamage);
+        if(targets.empty())
+        {
+            debug.commitFrame();    //#use RAII
+            return false;
         }
 
         // pre-sort DESC by guide durability
@@ -300,7 +264,6 @@ bool Goal::checkNuclearLaunch()
         // sort DESC by damage
         std::stable_sort(targets.begin(), targets.end(), [](const DamageInfo& a, const DamageInfo& b) { return a.m_damage > b.m_damage; });
 
-        DebugOut debug;
 //         debug.drawRect(optimizedRect, RewindClient::rgba(0xFF, 0, 0, 0x20));
 
         if (!targets.empty())
@@ -335,8 +298,8 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
         if(isReachable)
             return isReachable;
 
-        double maxDistance = teammate->getVisionRange() + nukeRadius;
-        double maxSquare = maxDistance * maxDistance;
+        double maxSquare = teammate->getVisionRange() * VISION_RANGE_HANDICAP;    //#todo - avoid this coefficient (just in case if guide will reach cloud a few turns later)
+        maxSquare *= maxSquare;
 
         return static_cast<uint16_t>((cellCenter.getSquareDistance(*teammate) < maxSquare) ? 1 : 0);
     });
@@ -347,17 +310,22 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
     // fill each cell which can affect enemy
     affectEnemyField.apply(reachableAlliens,
-        [&nukeRadiusSqare, &maxDamage, &nukeRadius/**/]
+        [&nukeRadiusSqare, &maxDamage, &nukeRadius, this]
     (const VehiclePtr& enemy, uint16_t score, const Point& cellCenter, const auto& dummy)
     {
         if(score == 0)
             return score;   // cell is not reachable by teammates
 
-        double distanceSquare = cellCenter.getSquareDistance(*enemy);
+        Point predictedPoint = Point(*enemy) + state().getVehicleCurrentSpeed(*enemy) * 2;
+
+        double distanceSquare = cellCenter.getSquareDistance(predictedPoint);
         if(distanceSquare >= nukeRadiusSqare)
             return score;
 
-		double thisDamage = (nukeRadius - sqrt(distanceSquare)) * maxDamage / nukeRadius;
+        double thisDamage = (nukeRadius - sqrt(distanceSquare)) * maxDamage / nukeRadius;
+        static constexpr double KILL_BONUS = 1.25;
+        if(thisDamage >= enemy->getDurability())
+            thisDamage *= KILL_BONUS;
 
         int newScore = score + static_cast<int>(thisDamage);
         if(newScore > std::numeric_limits<decltype(score)>::max())

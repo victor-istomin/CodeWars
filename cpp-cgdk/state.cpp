@@ -90,10 +90,20 @@ void State::updateVehicles()
         }
     }
 
+    m_vehiñleSpeed.clear();
     for (const model::VehicleUpdate& update : m_world->getVehicleUpdates())
     {
         if (update.getDurability() != 0)
-            vehicleById(update.getId()) = model::Vehicle(vehicleById(update.getId()), update);
+        {
+            auto& existing = vehicleById(update.getId());
+            auto  newUnit  = model::Vehicle(vehicleById(update.getId()), update);
+
+            Point oldPoint = Point(existing);
+            if(oldPoint != Point())
+                m_vehiñleSpeed[newUnit.getId()] = (newUnit - oldPoint);
+
+            existing = std::move(newUnit);
+        }
         else
             m_vehicles.erase(update.getId());
     }
@@ -520,6 +530,17 @@ double State::getUnitSpeedAt(const model::Vehicle& v, const Point& pos) const
     Constants::PointInt tile = m_constants->getTileIndex(pos);
     double factor = v.isAerial() ? m_constants->getMobilityFactor(m_constants->getWeather(tile)) : m_constants->getMobilityFactor(m_constants->getTerrain(tile));
     return v.getMaxSpeed() * factor;
+}
+
+Point State::getVehicleCurrentSpeed(const model::Vehicle& v) const
+{
+    Point speed;
+
+    auto itFound = m_vehiñleSpeed.find(v.getId());
+    if(itFound != m_vehiñleSpeed.end())
+        speed = itFound->second;
+
+    return speed;
 }
 
 // check is this enemy group intersects with another enemy group in order to detect massive rush

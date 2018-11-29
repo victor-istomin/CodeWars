@@ -49,7 +49,8 @@ private:
     bool isNoMoveComitted();
     bool checkNuclearLaunch();
 
-    static constexpr const int DRAFT_CELLS_COUNT = 16;
+    static constexpr const int DRAFT_CELLS_COUNT = 32;
+    static constexpr const double VISION_RANGE_HANDICAP = 0.7;    //#todo - avoid
 
     using DamageField       = PotentialField<uint16_t, Point, DRAFT_CELLS_COUNT>;
 

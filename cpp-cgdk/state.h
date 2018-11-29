@@ -28,6 +28,7 @@ public:
 
     typedef std::unordered_map<Id, model::Facility>       FacilityById;
     typedef std::unordered_map<Id, VehiclePtr>            VehicleByID;
+    typedef std::unordered_map<Id, Point>                 VehicleSpeedByID;
     typedef std::map<GroupHandle, VehicleGroup>           GroupByType;    // not eligible for unordered_map due to references to VehicleGroup's
     typedef std::vector<Id>                               IdList;
 
@@ -70,6 +71,7 @@ private:
     struct Constants;
     std::unique_ptr<Constants> m_constants;
     EnemyStrategyStats   m_enemyStats;
+    VehicleSpeedByID     m_vehiсleSpeed;
 
     struct Constants
     {
@@ -194,6 +196,8 @@ public:
     double getUnitVisionRange(const model::Vehicle& v) const     { return getUnitVisionRangeAt(v, v); }
     double getUnitVisionRangeAt(const model::Vehicle& v, const Point& pos) const;
     double getUnitSpeedAt(const model::Vehicle& v, const Point& pos) const;
+
+    Point getVehicleCurrentSpeed(const model::Vehicle& v) const;
 
     bool isEnemyCoveredByAnother(model::VehicleType groupId, VehicleGroup& mergedGroups) const;
 
