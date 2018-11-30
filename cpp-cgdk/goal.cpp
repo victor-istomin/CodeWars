@@ -264,8 +264,6 @@ bool Goal::checkNuclearLaunch()
         // sort DESC by damage
         std::stable_sort(targets.begin(), targets.end(), [](const DamageInfo& a, const DamageInfo& b) { return a.m_damage > b.m_damage; });
 
-//         debug.drawRect(optimizedRect, RewindClient::rgba(0xFF, 0, 0, 0x20));
-
         if (!targets.empty())
         {
             state().setNukeAction(targets.front().m_point, *targets.front().m_guide);
@@ -298,8 +296,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
         if(isReachable)
             return isReachable;
 
-        double maxSquare = teammate->getVisionRange() * VISION_RANGE_HANDICAP;    //#todo - avoid this coefficient (just in case if guide will reach cloud a few turns later)
-        maxSquare *= maxSquare;
+        double maxSquare = teammate->getSquaredVisionRange() * (VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);    //#todo - avoid this coefficient (just in case if guide will reach cloud a few turns later)
 
         return static_cast<uint16_t>((cellCenter.getSquareDistance(*teammate) < maxSquare) ? 1 : 0);
     });

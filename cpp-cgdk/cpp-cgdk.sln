@@ -5,6 +5,12 @@ VisualStudioVersion = 15.0.28010.2050
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cpp-cgdk", "cpp-cgdk.vcxproj", "{2CE92CD0-B49B-4C6D-B8EE-F1EC4D0A9398}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D6581A06-AC81-4A6F-9389-F9BCF632E937}"
+	ProjectSection(SolutionItems) = preProject
+		Performance1.psess = Performance1.psess
+		Performance2.psess = Performance2.psess
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true
@@ -41,6 +47,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {050164CB-6BA7-447F-AFBC-4FEF588B83AA}
+		SolutionGuid = {11289F59-307B-4678-B1DD-DC03ECCBD9D1}
 	EndGlobalSection
 EndGlobal

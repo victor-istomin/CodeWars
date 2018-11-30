@@ -98,8 +98,10 @@ public:
         Index index;
         for(Score& score : m_cells)
         {
+            Point cellCenter = cellCenterToWorld(index);
+
             for(const auto& item : collection)
-                score = f(item, score, cellCenterToWorld(index), *this);          //#todo - optimize out 'cellCenterToWorld'
+                score = f(item, score, cellCenter, *this);
 
             ++index;
         }
