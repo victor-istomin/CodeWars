@@ -18,7 +18,7 @@ public:
     void drawRect(const Rect& rect, uint32_t color);
 
     template <typename TPotentialField, typename ValToColor>
-    void drawPotentialField(const Point& dxdy, const TPotentialField& field, size_t layer, ValToColor&& getColor)
+    void drawPotentialField(const TPotentialField& field, size_t layer, ValToColor&& getColor)
     {
 #ifdef VISUALIZER
         field.visit([&](const auto& index, int score, const auto& pf)
@@ -52,8 +52,10 @@ public:
 
     void addEvent(const char* name, uint32_t time)
     {
+#ifdef TIME_PROFILE
         m_events[name].events++;
         m_events[name].totalTime += time;
+#endif // TIME_PROFILE
     }
 
     static DebugTimer& instance()

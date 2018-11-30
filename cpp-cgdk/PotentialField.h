@@ -60,7 +60,6 @@ public:
     {
     }
 
-    // #todo - cache
     Point cellCenterToWorld (const Index& index) const { return m_dxdyCellCenter + Point(index.x * m_cellWidth, index.y * m_cellHeight); }
     Point cellTopLeftToWorld(const Index& index) const { return m_dxdy + Point(index.x * m_cellWidth, index.y * m_cellHeight); }
     

@@ -93,8 +93,8 @@ bool Goal::checkNuclearLaunch()
         reachableAlliens.reserve(allVehicles.size());
 
         const model::Player& enemyPlayer = *state().enemy();
-        Point enemyNuke = state().enemyNuclearMissileTarget();
-        int   ticksToEnemyNuke = enemyPlayer.getNextNuclearStrikeTickIndex() != -1 ? enemyPlayer.getNextNuclearStrikeTickIndex() - state().world()->getTickIndex() : 0;
+        const Point  enemyNuke = state().enemyNuclearMissileTarget();
+        const int    ticksToEnemyNuke = enemyPlayer.getNextNuclearStrikeTickIndex() != -1 ? enemyPlayer.getNextNuclearStrikeTickIndex() - state().world()->getTickIndex() : 0;
 
         const double nukeRadius        = m_state.game()->getTacticalNuclearStrikeRadius();
         const double maxPossibleDamage = m_state.game()->getMaxTacticalNuclearStrikeDamage();
@@ -130,27 +130,6 @@ bool Goal::checkNuclearLaunch()
             }
         }
 
-        auto drawDamage = [](size_t layer, Rect rect, const DamageField& field)
-        {
-            DebugOut debug;
-
-            debug.drawPotentialField(rect.m_topLeft, field, layer,
-                [](uint16_t damage)
-            {
-                uint8_t value = std::min(damage / 32, 0xFF);
-
-                int rb = std::max(0, 0x88 - value);
-                int a = std::max(0x78, 0xD8 - (value * 0x50 / 0xFF));
-
-                auto color = damage ? RewindClient::rgba(rb, 0xFF, rb, a) : RewindClient::rgba(0x55, 0x55, 0x55, 0x88);
-                if(damage == 1)
-                    color = RewindClient::rgba(0xFF, 0xFF, 0xFF, 0x88);
-
-                return color;
-            });
-        };
-
-
         // fill reachable spots with positive values
         DamageField damageField = getDamageField(reachableRect, teammates, teammatesHighHp, reachableAlliens);
 
@@ -164,22 +143,16 @@ bool Goal::checkNuclearLaunch()
         if(bestCells.empty())
             return false;
 
-
-
-
-        // second iteration
-        // #todo - filter out unreachable enemies
-
+        // refine iterations
         auto cellToRect = [](const DamageField& damageField, const DamageField::Cell& cell)
         {
             return Rect{ damageField.cellTopLeftToWorld(cell.index), damageField.cellTopLeftToWorld(cell.index)
                                                                      + Point { (double)damageField.cellWidth(), (double)damageField.cellHeight() } };
         };
 
-        // #todo - looks ugly
         auto optimizedField = std::make_unique<DamageField>(damageField);
-
-        for(int i = 0; i < 3; ++i)
+        constexpr int MAX_ITERATIONS = 3;
+        for(int i = 0; i < MAX_ITERATIONS; ++i)
         {
             Rect optimizedRect = cellToRect(*optimizedField, bestCells.front());
             for(const auto& cell : bestCells)
@@ -195,7 +168,6 @@ bool Goal::checkNuclearLaunch()
                                                    optimizedRect.m_topLeft + Point {(double)DRAFT_CELLS_COUNT, (double)DRAFT_CELLS_COUNT} });
             }
 
-            //#todo - std::move()?
             optimizedField = std::make_unique<DamageField>(getDamageField(optimizedRect, teammates, teammatesHighHp, reachableAlliens));
 
             auto bests = optimizedField->getBestN<MAX_CELLS / 2>();
@@ -208,23 +180,8 @@ bool Goal::checkNuclearLaunch()
                 break;
         }
 
-        /* *** debug only */
-        Rect optimizedRect = cellToRect(*optimizedField, bestCells.front());
-        for(const auto& cell : bestCells)
-        {
-            optimizedRect.ensureContains(cellToRect(*optimizedField, cell));
-        }
-
-        /*****/
-
-
         if(bestCells.empty())
             return false;
-
-        DebugOut debug;
-        drawDamage(1, reachableRect, damageField);
-        drawDamage(2, optimizedRect, *optimizedField);
-
 
         struct DamageInfo
         {
@@ -253,27 +210,42 @@ bool Goal::checkNuclearLaunch()
         }
 
         if(targets.empty())
-        {
-            debug.commitFrame();    //#use RAII
             return false;
-        }
 
-        // pre-sort DESC by guide durability
+        // pre-sort DESC by guide durability, then sort DESC by damage
         std::sort(targets.begin(), targets.end(), [](const DamageInfo& a, const DamageInfo& b) { return a.m_guide->getDurability() > b.m_guide->getDurability(); });
-
-        // sort DESC by damage
         std::stable_sort(targets.begin(), targets.end(), [](const DamageInfo& a, const DamageInfo& b) { return a.m_damage > b.m_damage; });
 
+        DebugOut debug;
         if (!targets.empty())
         {
             state().setNukeAction(targets.front().m_point, *targets.front().m_guide);
             debug.drawNuke(targets.front().m_point, targets.front().m_guide, m_state);
         }
 
-        /**/
+        /* debug code */
+        auto drawDamage = [&debug](size_t layer, const DamageField& field)
+        {
+            debug.drawPotentialField(field, layer, [](uint16_t damage)
+            {
+                uint8_t value = std::min(damage / 32, 0xFF);
+
+                int rb = std::max(0, 0x88 - value);
+                int a  = std::max(0x78, 0xD8 - (value * 0x50 / 0xFF));
+
+                auto color = damage ? RewindClient::rgba(rb, 0xFF, rb, a) : RewindClient::rgba(0x55, 0x55, 0x55, 0x88);
+                if(damage == 1)
+                    color = RewindClient::rgba(0xFF, 0xFF, 0xFF, 0x88);
+
+                return color;
+            });
+        };
+
+        drawDamage(1, damageField);
+        drawDamage(2, *optimizedField);
         debug.drawVehicles(state().getAllVehicles(), *state().player());
         debug.commitFrame();
-        /**/
+        /* *** */
 
     }
 
@@ -343,7 +315,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
             return score;
 
         constexpr int PENALTY = -2;
-		double thisDamage = PENALTY * (nukeRadius - sqrt(distanceSquare)) * maxDamage / nukeRadius;
+        double thisDamage = PENALTY * (nukeRadius - sqrt(distanceSquare)) * maxDamage / nukeRadius;
 
         int newScore = score + static_cast<int>(thisDamage);
         if(newScore < 1)
