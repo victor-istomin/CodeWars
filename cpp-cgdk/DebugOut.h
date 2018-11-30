@@ -52,6 +52,7 @@ public:
 
     void addEvent(const char* name, uint32_t time)
     {
+#define TIME_PROFILE
 #ifdef TIME_PROFILE
         m_events[name].events++;
         m_events[name].totalTime += time;

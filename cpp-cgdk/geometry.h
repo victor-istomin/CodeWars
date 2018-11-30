@@ -8,6 +8,8 @@
 #undef max
 #undef min
 
+#include <pmmintrin.h>
+
 struct Point
 {
     static const double k_epsilon;
@@ -38,8 +40,45 @@ struct Point
 
     bool isWithinRadius(double r) const                           { return pow2(m_x) + pow2(m_y) < pow2(r); }
 
-    double getDistanceTo(const Point& other)     const            { return std::sqrt(getSquareDistance(other)); }
-    double getSquareDistance(const Point& other) const            { return pow2(m_x - other.m_x) + pow2(m_y - other.m_y); }
+#define USE_SIMD
+
+    double getDistanceTo(const Point& other) const            
+    {
+#ifdef USE_SIMD
+        __m128d diffs   = _mm_sub_pd(_mm_load_pd(&m_x), _mm_load_pd(&other.m_x));
+        __m128d diffsSq = _mm_mul_pd(diffs, diffs);
+        __m128d roots   = _mm_sqrt_pd(_mm_hadd_pd(diffsSq, diffsSq));
+        return roots.m128d_f64[0];
+#else
+        return std::sqrt(getSquareDistance(other));
+#endif
+    }
+
+
+    double getSquareDistance(const Point& other) const
+    {
+#ifdef USE_SIMD
+        __m128d diffs   = _mm_sub_pd(_mm_load_pd(&m_x), _mm_load_pd(&other.m_x));
+        __m128d diffsSq = _mm_mul_pd(diffs, diffs);
+        __m128d sums    = _mm_hadd_pd(diffsSq, diffsSq);
+        return sums.m128d_f64[0];
+#else
+        return pow2(m_x - other.m_x) + pow2(m_y - other.m_y);
+#endif
+    }
+
+    bool isDistanceSqLess(const Point& other, double maxDistanceSquared) const
+    {
+#ifdef USE_SIMD
+        __m128d diffs   = _mm_sub_pd(_mm_load_pd(&m_x), _mm_load_pd(&other.m_x));
+        __m128d diffsSq = _mm_mul_pd(diffs, diffs);
+        __m128d sums    = _mm_hadd_pd(diffsSq, diffsSq);
+
+        return _mm_comilt_sd(sums, _mm_load_sd(&maxDistanceSquared));
+#else
+        return getSquareDistance(other) < maxDistanceSquared;
+#endif
+    }
 };
 
 struct Rect

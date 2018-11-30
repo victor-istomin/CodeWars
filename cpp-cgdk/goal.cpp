@@ -252,6 +252,7 @@ bool Goal::checkNuclearLaunch()
     return m_state.isMoveCommitted();
 }
 
+#include <windows.h>
 Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vector<VehiclePtr>& teammates, const std::vector<VehiclePtr>& teammatesHighHp, const std::vector<VehiclePtr>& reachableAlliens)
 {
     clock_t dbg_startTime = clock();
@@ -270,7 +271,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
         double maxSquare = teammate->getSquaredVisionRange() * (VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);    //#todo - avoid this coefficient (just in case if guide will reach cloud a few turns later)
 
-        return static_cast<uint16_t>((cellCenter.getSquareDistance(*teammate) < maxSquare) ? 1 : 0);
+        return static_cast<uint16_t>(cellCenter.isDistanceSqLess(*teammate, maxSquare));
     });
 
     auto pow2 = [](auto x) { return x * x; };
