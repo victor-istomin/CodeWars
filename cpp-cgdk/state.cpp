@@ -224,7 +224,7 @@ void State::initConstants()
     auto itHelicopter = std::find_if(m_world->getNewVehicles().begin(), m_world->getNewVehicles().end(),
         [](const model::Vehicle& v) { return v.getType() == model::VehicleType::HELICOPTER; });
 
-    const int tileSize = static_cast<int>(m_game->getWorldWidth()) / m_world->getWeatherByCellXY().size();
+    const int tileSize = static_cast<int>(m_game->getWorldWidth()) / (int)m_world->getWeatherByCellXY().size();
 
     double helicopterRadius = itHelicopter != m_world->getNewVehicles().end() ? itHelicopter->getRadius() : 2;
 
@@ -493,7 +493,7 @@ bool State::enemyDoesNotHeap() const
 size_t State::newTeammatesCount() const
 {
     return std::accumulate(m_newTeammates.begin(), m_newTeammates.end(), 0, 
-        [](int old, const auto& idGroupPair) { return old += idGroupPair.second.m_units.size(); });
+        [](int old, const auto& idGroupPair) { return old += (int)idGroupPair.second.m_units.size(); });
 }
 
 State::GroupByType State::popNewUnits()

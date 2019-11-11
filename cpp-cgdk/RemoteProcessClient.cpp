@@ -36,7 +36,7 @@ signed char* ReadBuffer::read(unsigned int byteCount) {
         buf.erase(buf.begin(), buf.begin() + pos);
         pos = 0;
         
-        receivedByteCount = socket.Receive(MAX_BUFFER_SIZE - buf.size());
+        receivedByteCount = socket.Receive(MAX_BUFFER_SIZE - (int32)buf.size());
         if (receivedByteCount > 0)
             buf.insert(buf.end(), socket.GetData(), socket.GetData() + receivedByteCount);
     } while (receivedByteCount > 0);
@@ -166,7 +166,7 @@ vector<Facility> RemoteProcessClient::readFacilities() {
 }
 
 void RemoteProcessClient::writeFacilities(const vector<Facility>& facilities) {
-    int facilityCount = facilities.size();
+    int facilityCount = (int)facilities.size();
     writeInt(facilityCount);
 
     for (int facilityIndex = 0; facilityIndex < facilityCount; ++facilityIndex) {
@@ -413,7 +413,7 @@ vector<Game> RemoteProcessClient::readGames() {
 }
 
 void RemoteProcessClient::writeGames(const vector<Game>& games) {
-    int gameCount = games.size();
+    int gameCount = (int)games.size();
     writeInt(gameCount);
 
     for (int gameIndex = 0; gameIndex < gameCount; ++gameIndex) {
@@ -442,7 +442,7 @@ void RemoteProcessClient::writeMove(const Move& move) {
 }
 
 void RemoteProcessClient::writeMoves(const vector<Move>& moves) {
-    int moveCount = moves.size();
+    int moveCount = (int)moves.size();
     writeInt(moveCount);
 
     for (int moveIndex = 0; moveIndex < moveCount; ++moveIndex) {
@@ -511,7 +511,7 @@ vector<Player> RemoteProcessClient::readPlayers() {
 }
 
 void RemoteProcessClient::writePlayers(const vector<Player>& players) {
-    int playerCount = players.size();
+    int playerCount = (int)players.size();
     writeInt(playerCount);
 
     for (int playerIndex = 0; playerIndex < playerCount; ++playerIndex) {
@@ -554,7 +554,7 @@ vector<PlayerContext> RemoteProcessClient::readPlayerContexts() {
 }
 
 void RemoteProcessClient::writePlayerContexts(const vector<PlayerContext>& playerContexts) {
-    int playerContextCount = playerContexts.size();
+    int playerContextCount = (int)playerContexts.size();
     writeInt(playerContextCount);
 
     for (int playerContextIndex = 0; playerContextIndex < playerContextCount; ++playerContextIndex) {
@@ -644,7 +644,7 @@ vector<Vehicle> RemoteProcessClient::readVehicles() {
 }
 
 void RemoteProcessClient::writeVehicles(const vector<Vehicle>& vehicles) {
-    int vehicleCount = vehicles.size();
+    int vehicleCount = (int)vehicles.size();
     writeInt(vehicleCount);
 
     for (int vehicleIndex = 0; vehicleIndex < vehicleCount; ++vehicleIndex) {
@@ -697,7 +697,7 @@ vector<VehicleUpdate> RemoteProcessClient::readVehicleUpdates() {
 }
 
 void RemoteProcessClient::writeVehicleUpdates(const vector<VehicleUpdate>& vehicleUpdates) {
-    int vehicleUpdateCount = vehicleUpdates.size();
+    int vehicleUpdateCount = (int)vehicleUpdates.size();
     writeInt(vehicleUpdateCount);
 
     for (int vehicleUpdateIndex = 0; vehicleUpdateIndex < vehicleUpdateCount; ++vehicleUpdateIndex) {
@@ -764,7 +764,7 @@ vector<World> RemoteProcessClient::readWorlds() {
 }
 
 void RemoteProcessClient::writeWorlds(const vector<World>& worlds) {
-    int worldCount = worlds.size();
+    int worldCount = (int)worlds.size();
     writeInt(worldCount);
 
     for (int worldIndex = 0; worldIndex < worldCount; ++worldIndex) {
@@ -788,7 +788,7 @@ vector<signed char> RemoteProcessClient::readByteArray() {
 }
 
 void RemoteProcessClient::writeByteArray(const vector<signed char>& value) {
-    writeInt(value.size());
+    writeInt((int)value.size());
     writeBytes(value);
 }
 
@@ -844,7 +844,7 @@ template <typename E> void RemoteProcessClient::writeEnum(E value) {
 }
 
 template <typename E> void RemoteProcessClient::writeEnumArray(const vector<E>& value) {
-    int length = value.size();
+    int length = (int)value.size();
     writeInt(length);
 
     for (int i = 0; i < length; ++i) {
@@ -853,7 +853,7 @@ template <typename E> void RemoteProcessClient::writeEnumArray(const vector<E>& 
 }
 
 template <typename E> void RemoteProcessClient::writeEnumArray2D(const vector<vector<E> >& value) {
-    int length = value.size();
+    int length = (int)value.size();
     writeInt(length);
 
     for (int i = 0; i < length; ++i) {
@@ -968,7 +968,7 @@ void RemoteProcessClient::writeInt(int value) {
 }
 
 void RemoteProcessClient::writeIntArray(const vector<int>& value) {
-    int length = value.size();
+    int length = (int)value.size();
     writeInt(length);
 
     for (int i = 0; i < length; ++i) {
@@ -977,7 +977,7 @@ void RemoteProcessClient::writeIntArray(const vector<int>& value) {
 }
 
 void RemoteProcessClient::writeIntArray2D(const vector<vector<int> >& value) {
-    int length = value.size();
+    int length = (int)value.size();
     writeInt(length);
 
     for (int i = 0; i < length; ++i) {

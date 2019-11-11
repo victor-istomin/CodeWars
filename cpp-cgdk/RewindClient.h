@@ -116,7 +116,7 @@ private:
     template<typename... Args>
     static inline std::string format(const char *fmt, Args... args) {
         static char buf[2048];
-        int bytes = sprintf(buf, fmt, args...);
+        int bytes = sprintf_s(buf, fmt, args...);
         buf[bytes] = '\0';
         return std::string(buf);
     }
