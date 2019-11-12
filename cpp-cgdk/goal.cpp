@@ -253,6 +253,38 @@ bool Goal::checkNuclearLaunch()
     return m_state.isMoveCommitted();
 }
 
+template <typename FieldType, size_t PropertiesCount, size_t MaxObjectsCount>
+class alignas(16) SimdHelper
+{
+    FieldType m_field[PropertiesCount][MaxObjectsCount];      // e.g. 2 fields, 3 rows { {x,x,x}, {y,y,y} }
+    size_t m_objectsCount = 0;
+
+    template <typename Field, typename ... Fields>
+    void addCell(size_t objectIndex, size_t cellIndex, Field&& first, Fields&& ... rest)
+    {
+        getPropertyArray(cellIndex)[objectIndex] = std::forward<Field>(first);
+
+        if constexpr(sizeof ... (rest) > 0)
+            addCell(objectIndex, ++cellIndex, std::forward<Fields>(rest)...);
+    }
+
+public:
+
+    using PropertyArray = FieldType[MaxObjectsCount];
+    PropertyArray& getPropertyArray(size_t propertyIndex)               { return m_field[propertyIndex]; }
+    FieldType&     getValue(PropertyArray& singlePart, size_t rowIndex) { return singlePart[rowIndex]; }
+
+    template <typename ... Fields>
+    void addRow(Fields&& ... args)
+    {
+        static_assert(sizeof ... (args) == FieldsCount, "Insufficient parameters for the whole object");
+
+        addCell(++m_objectsCount, 0, std::forward<Fields>(args)...);
+    }
+};
+
+
+
 Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vector<VehiclePtr>& teammates, const std::vector<VehiclePtr>& teammatesHighHp, const std::vector<VehiclePtr>& reachableAlliens)
 {
     DebugTimer::AutoLog gbg_timer(__FUNCTION__);
