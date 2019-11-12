@@ -4,9 +4,6 @@
 #include "RewindClient.h"
 #include "geometry.h"
 
-#include <string>
-#include <map>
-
 class DebugOut
 {
 public:
@@ -33,37 +30,6 @@ public:
 
     void commitFrame();
 
-};
-
-class DebugTimer
-{
-    struct Info
-    {
-        size_t   events;
-        uint32_t totalTime;
-    };
-
-    std::map<std::string, Info> m_events;
-
-    DebugTimer() = default;
-    ~DebugTimer();
-
-public:
-
-    void addEvent(const char* name, uint32_t time)
-    {
-#define TIME_PROFILE
-#ifdef TIME_PROFILE
-        m_events[name].events++;
-        m_events[name].totalTime += time;
-#endif // TIME_PROFILE
-    }
-
-    static DebugTimer& instance()
-    {
-        static DebugTimer timer;
-        return timer;
-    }
 };
 
 

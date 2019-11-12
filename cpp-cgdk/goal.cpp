@@ -2,6 +2,7 @@
 #include "goalManager.h"
 #include "PotentialField.h"
 #include "DebugOut.h"
+#include "DebugTimer.h"
 #include <array>
 
 #undef min
@@ -252,10 +253,10 @@ bool Goal::checkNuclearLaunch()
     return m_state.isMoveCommitted();
 }
 
-#include <windows.h>
 Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vector<VehiclePtr>& teammates, const std::vector<VehiclePtr>& teammatesHighHp, const std::vector<VehiclePtr>& reachableAlliens)
 {
-    clock_t dbg_startTime = clock();
+    DebugTimer::AutoLog gbg_timer(__FUNCTION__);
+
     DamageField affectEnemyField ((int)reachableRect.width(), (int)reachableRect.height(), reachableRect.m_topLeft);
 
     Point fieldsDxDy        = reachableRect.m_topLeft;
@@ -339,8 +340,6 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
         return static_cast<decltype(score)>(newScore);
     });
-
-    DebugTimer::instance().addEvent(__FUNCTION__, clock() - dbg_startTime);
 
     return affectEnemyField;
 }

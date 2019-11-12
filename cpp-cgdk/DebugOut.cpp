@@ -2,8 +2,6 @@
 #include "RewindClient.h"
 #include "model/Vehicle.h"
 
-#include <iostream>
-
 using namespace model;
 
 DebugOut::DebugOut()
@@ -89,14 +87,4 @@ void DebugOut::commitFrame()
 #endif // VISUALIZER
 }
 
-DebugTimer::~DebugTimer()
-{
-    for(const auto& nameInfoPair : m_events)
-    {
-        std::cout << nameInfoPair.first << ": total=" << nameInfoPair.second.events << "; time=" << nameInfoPair.second.totalTime
-                  << "; avg=" << static_cast<double>(nameInfoPair.second.totalTime) / nameInfoPair.second.events << std::endl;
-    }
 
-    ::MessageBox(0, "done", "done", 0);
-    // std::cout << "Done\n";
-}

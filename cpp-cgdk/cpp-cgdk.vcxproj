@@ -290,6 +290,7 @@
     <ClCompile Include="csimplesocket\PassiveSocket.cpp" />
     <ClCompile Include="csimplesocket\SimpleSocket.cpp" />
     <ClCompile Include="DebugOut.cpp" />
+    <ClCompile Include="DebugTimer.cpp" />
     <ClCompile Include="geometry.cpp" />
     <ClCompile Include="goal.cpp" />
     <ClCompile Include="GoalCaptureNearFacility.cpp" />
@@ -326,6 +327,7 @@
     <ClInclude Include="csimplesocket\SimpleSocket.h" />
     <ClInclude Include="csimplesocket\StatTimer.h" />
     <ClInclude Include="DebugOut.h" />
+    <ClInclude Include="DebugTimer.h" />
     <ClInclude Include="forwardDeclarations.h" />
     <ClInclude Include="geometry.h" />
     <ClInclude Include="goal.h" />
