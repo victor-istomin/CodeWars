@@ -262,16 +262,21 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
     const double cellHypot  = std::hypot(affectEnemyField.cellWidth() / 2, affectEnemyField.cellHeight() / 2);
     const double nukeRadius = m_state.game()->getTacticalNuclearStrikeRadius() + cellHypot;
 
+    using Vehicles = std::vector<VehiclePtr>;
+
     // fill each reachable by teammate cell with '1'
     affectEnemyField.apply(teammatesHighHp,
-        [nukeRadius](const VehiclePtr& teammate, uint16_t isReachable, const Point& cellCenter, const auto& pf)
+        [nukeRadius](const Vehicles& teammates, uint16_t isReachable, const Point& cellCenter, const auto& pf) -> uint16_t
     {
-        if(isReachable)
-            return isReachable;
+        for(const VehiclePtr& teammate : teammates)
+        {
+            double maxSquare = teammate->getSquaredVisionRange() * (VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);    //#todo - avoid this coefficient (just in case if guide will reach cloud a few turns later)
 
-        double maxSquare = teammate->getSquaredVisionRange() * (VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);    //#todo - avoid this coefficient (just in case if guide will reach cloud a few turns later)
+            if(cellCenter.isDistanceSqLess(*teammate, maxSquare))
+                return 1;
+        }
 
-        return static_cast<uint16_t>(cellCenter.isDistanceSqLess(*teammate, maxSquare));
+        return 0;
     });
 
     auto pow2 = [](auto x) { return x * x; };
@@ -281,23 +286,28 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
     // fill each cell which can affect enemy
     affectEnemyField.apply(reachableAlliens,
         [&nukeRadiusSqare, &maxDamage, &nukeRadius, this]
-    (const VehiclePtr& enemy, uint16_t score, const Point& cellCenter, const auto& dummy)
+    (const Vehicles& enemies, uint16_t score, const Point& cellCenter, const auto& dummy)
     {
         if(score == 0)
             return score;   // cell is not reachable by teammates
 
-        Point predictedPoint = Point(*enemy) + state().getVehicleCurrentSpeed(*enemy) * 2;
+        int newScore = score;
+        for(const VehiclePtr& enemy : enemies)
+        {
+            Point predictedPoint = Point(*enemy) + state().getVehicleCurrentSpeed(*enemy) * 2;
 
-        double distanceSquare = cellCenter.getSquareDistance(predictedPoint);
-        if(distanceSquare >= nukeRadiusSqare)
-            return score;
+            double distanceSquare = cellCenter.getSquareDistance(predictedPoint);
+            if(distanceSquare >= nukeRadiusSqare)
+                continue;
 
-        double thisDamage = (nukeRadius - sqrt(distanceSquare)) * maxDamage / nukeRadius;
-        static constexpr double KILL_BONUS = 1.25;
-        if(thisDamage >= enemy->getDurability())
-            thisDamage *= KILL_BONUS;
+            double thisDamage = (nukeRadius - sqrt(distanceSquare)) * maxDamage / nukeRadius;
+            static constexpr double KILL_BONUS = 1.25;
+            if(thisDamage >= enemy->getDurability())
+                thisDamage *= KILL_BONUS;
 
-        int newScore = score + static_cast<int>(thisDamage);
+            newScore += static_cast<int>(thisDamage);
+        }
+
         if(newScore > std::numeric_limits<decltype(score)>::max())
             newScore = std::numeric_limits<decltype(score)>::max();
 
@@ -306,19 +316,24 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
     // add a penalty for friendly-fire
     affectEnemyField.apply(teammates,
-        [&nukeRadiusSqare, &maxDamage, &nukeRadius/**/](const VehiclePtr& teammate, uint16_t score, const Point& cellCenter, const auto& pf)
+        [&nukeRadiusSqare, &maxDamage, &nukeRadius](const Vehicles& teammates, uint16_t score, const Point& cellCenter, const auto& pf)
     {
         if(score <= 1)
             return score;    // no sense to drop nuke here
 
-        double distanceSquare = cellCenter.getSquareDistance(*teammate);
-        if(distanceSquare >= nukeRadiusSqare)
-            return score;
+        int newScore = score;
+        for(const VehiclePtr& teammate : teammates)
+        {
+            double distanceSquare = cellCenter.getSquareDistance(*teammate);
+            if(distanceSquare >= nukeRadiusSqare)
+                continue;
 
-        constexpr int PENALTY = -2;
-        double thisDamage = PENALTY * (nukeRadius - sqrt(distanceSquare)) * maxDamage / nukeRadius;
+            constexpr int PENALTY = -2;
+            double thisDamage = PENALTY * (nukeRadius - sqrt(distanceSquare)) * maxDamage / nukeRadius;
 
-        int newScore = score + static_cast<int>(thisDamage);
+            newScore += static_cast<int>(thisDamage);
+        }
+
         if(newScore < 1)
             newScore = 0;
 

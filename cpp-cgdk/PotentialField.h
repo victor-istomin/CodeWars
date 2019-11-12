@@ -22,27 +22,26 @@ class PotentialField : public TagIsPotentialField
 public :
     struct Index
     {
-        int x = 0;
-        int y = 0;
+        int index = 0;
+
+        int x() const { return index % CellsBySide; };
+        int y() const { return index / CellsBySide; };
 
         Index& operator++() 
         {
-            if(++x == CellsBySide)
-            {
-                x = 0;
-                ++y;
-            }
+            ++index;
             return *this;
         }
     };
 
     constexpr static int k_SideSize = CellsBySide;
 
-    int                m_cellWidth;
-    int                m_cellHeight;
-    Point              m_dxdy;
-    Point              m_dxdyCellCenter;     // cache, used very often
-    std::vector<Score> m_cells;
+    int   m_cellWidth;
+    int   m_cellHeight;
+    Point m_dxdy;
+    Point m_dxdyCellCenter;     // cache, used very often
+
+    alignas(16) std::array<Score, CellsBySide*CellsBySide> m_cells;
 
     static int alignSize(double size)
     {
@@ -56,12 +55,13 @@ public:
         , m_cellHeight(alignSize(height) / CellsBySide)
         , m_dxdy(dxdy)
         , m_dxdyCellCenter(dxdy + Point(m_cellWidth / 2, m_cellHeight / 2))
-        , m_cells(CellsBySide * CellsBySide, 0)
+        , m_cells()
     {
+        m_cells.fill(0);
     }
 
-    Point cellCenterToWorld (const Index& index) const { return m_dxdyCellCenter + Point(index.x * m_cellWidth, index.y * m_cellHeight); }
-    Point cellTopLeftToWorld(const Index& index) const { return m_dxdy + Point(index.x * m_cellWidth, index.y * m_cellHeight); }
+    Point cellCenterToWorld (const Index& index) const { return m_dxdyCellCenter + Point(index.x() * m_cellWidth, index.y() * m_cellHeight); }
+    Point cellTopLeftToWorld(const Index& index) const { return m_dxdy + Point(index.x() * m_cellWidth, index.y() * m_cellHeight); }
     
     Index worldToCell(Point point) const 
     { 
@@ -71,7 +71,7 @@ public:
 
     Score get(const Index& index) const 
     { 
-        return m_cells[index.x + index.y * CellsBySide];
+        return m_cells[index.x() + index.y() * CellsBySide];
     }
 
     int cellWidth() const  { return m_cellWidth; }
@@ -99,8 +99,7 @@ public:
         {
             Point cellCenter = cellCenterToWorld(index);
 
-            for(const auto& item : collection)
-                score = f(item, score, cellCenter, *this);
+            score = f(collection, score, cellCenter, *this);
 
             ++index;
         }
@@ -162,7 +161,7 @@ public:
             if(ptr != nullptr)
             {
                 int pos = static_cast<int>(ptr - m_cells.data());
-                best[i] = Cell{ Index { pos % CellsBySide, pos / CellsBySide }, *ptr };
+                best[i] = Cell{ Index { pos }, *ptr };
             }
         }
 

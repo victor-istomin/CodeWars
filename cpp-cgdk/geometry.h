@@ -40,7 +40,7 @@ struct Point
 
     bool isWithinRadius(double r) const                           { return pow2(m_x) + pow2(m_y) < pow2(r); }
 
-#define USE_SIMD
+//#define USE_SIMD
 
     double getDistanceTo(const Point& other) const            
     {
