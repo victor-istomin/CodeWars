@@ -276,7 +276,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
     for(const VehiclePtr& teammate : teammatesHighHp)
         s_simdDistances.addVehicle(*teammate, teammate->getSquaredVisionRange());
 
-    size_t simdIncrement = 16/*256 bits*/ / sizeof(VehiclePosSimd::Value);
+    size_t simdIncrement = 32/*256 bits*/ / sizeof(VehiclePosSimd::Value);
     for(int i = s_simdDistances.size(); (i % simdIncrement) == 0; ++i)
         s_simdDistances.addVehicle(*teammatesHighHp.front(), -1);    // add dummies to fill the whole YMM register
 #endif
