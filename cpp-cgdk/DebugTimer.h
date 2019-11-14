@@ -2,14 +2,20 @@
 
 #include <string>
 #include <map>
+#include <vector>
 #include <chrono>
 
 class DebugTimer
 {
     struct Info
     {
-        size_t events;
-        double totalTime;
+        std::vector<double> totalTime;
+
+        Info()
+            : totalTime()
+        {
+            totalTime.reserve(4000);
+        }
     };
 
     std::map<std::string, Info> m_events;
@@ -19,14 +25,15 @@ class DebugTimer
 
 public:
 
-    void addEvent(const char* name, double time)
-    {
 #define TIME_PROFILE
+    void addEvent(const std::string& name, double time)
+    {
 #ifdef TIME_PROFILE
-        m_events[name].events++;
-        m_events[name].totalTime += time;
+        m_events[name].totalTime.push_back(time);
 #endif // TIME_PROFILE
     }
+
+    void printEvent(const std::pair<std::string, Info>& eventInfo);
 
     static DebugTimer& instance()
     {
@@ -50,10 +57,18 @@ public:
 
         ~AutoLog()
         {
+            auto startThis = std::chrono::high_resolution_clock::now();
+
             auto finish = std::chrono::high_resolution_clock::now();
             double lastTime = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(finish - m_start).count();
 
             DebugTimer::instance().addEvent(m_name, lastTime);
+
+            auto finishThis = std::chrono::high_resolution_clock::now();
+            double logTime = 2 * std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(finishThis - startThis).count();
+
+            static const std::string autolog = "DebugTimer::AutoLog";
+            DebugTimer::instance().addEvent(autolog, logTime);
         }
         
     };
