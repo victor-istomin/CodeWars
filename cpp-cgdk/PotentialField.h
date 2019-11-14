@@ -4,7 +4,9 @@
 #include <limits>
 
 #include <cstdint>
+#include <cmath>
 #include <cassert>
+#include <cstring>
 #include <functional>
 #include <type_traits>
 
@@ -27,7 +29,7 @@ public :
         int x() const { return index % CellsBySide; };
         int y() const { return index / CellsBySide; };
 
-        Index& operator++() 
+        Index& operator++()
         {
             ++index;
             return *this;
@@ -62,15 +64,15 @@ public:
 
     Point cellCenterToWorld (const Index& index) const { return m_dxdyCellCenter + Point(index.x() * m_cellWidth, index.y() * m_cellHeight); }
     Point cellTopLeftToWorld(const Index& index) const { return m_dxdy + Point(index.x() * m_cellWidth, index.y() * m_cellHeight); }
-    
-    Index worldToCell(Point point) const 
-    { 
-        point -= m_dxdy; 
+
+    Index worldToCell(Point point) const
+    {
+        point -= m_dxdy;
         return Index { static_cast<int>(point.m_x / m_cellWidth), static_cast<int>(point.m_y / m_cellHeight) };
     }
 
-    Score get(const Index& index) const 
-    { 
+    Score get(const Index& index) const
+    {
         return m_cells[index.x() + index.y() * CellsBySide];
     }
 
@@ -92,7 +94,7 @@ public:
     // Functor = f(const CollectionItem& item, Score score, Point cellCenter, const PotentialField& field)
     // for each cell { for each item { cellScore = f(...); } }
     template <typename Collection, typename Functor>
-    auto apply(const typename Collection& collection, Functor&& f) -> std::enable_if_t<!std::is_base_of_v<TagIsPotentialField, Collection>>
+    auto apply(const Collection& collection, Functor&& f) -> std::enable_if_t<!std::is_base_of_v<TagIsPotentialField, Collection>>
     {
         Index index;
         for(Score& score : m_cells)

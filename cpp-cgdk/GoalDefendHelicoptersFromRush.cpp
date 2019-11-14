@@ -5,7 +5,7 @@
 #include <cmath>
 #include <typeinfo>
 
-#include "goalDefendHelicoptersFromRush.h"
+#include "GoalDefendHelicoptersFromRush.h"
 #include "GoalMixTanksAndHealers.h"
 #include "GoalCaptureNearFacility.h"
 #include "goalUtils.h"

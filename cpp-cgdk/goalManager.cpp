@@ -1,5 +1,5 @@
 #include "goalManager.h"
-#include "goalDefendHelicoptersFromRush.h"
+#include "GoalDefendHelicoptersFromRush.h"
 #include "GoalDefendTank.h"
 #include "GoalDefendIfv.h"
 #include "GoalMixTanksAndHealers.h"

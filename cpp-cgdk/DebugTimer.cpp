@@ -2,7 +2,9 @@
 #include <iostream>
 #include <algorithm>
 #include <numeric>
-#include <windows.h>
+#ifdef _WIN32
+#   include <windows.h>
+#endif
 
 DebugTimer::~DebugTimer()
 {
@@ -10,10 +12,13 @@ DebugTimer::~DebugTimer()
         printEvent(nameInfoPair);
 
     std::cout << "Done\n";
+
+#ifdef _WIN32
     if(IsDebuggerPresent())
         DebugBreak();
     else
         MessageBoxA(0, "Done", __FUNCTION__, 0);
+#endif
 }
 
 

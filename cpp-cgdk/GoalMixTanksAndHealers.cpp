@@ -1,5 +1,5 @@
 #include "GoalMixTanksAndHealers.h"
-#include "State.h"
+#include "state.h"
 #include "VehicleGroup.h"
 #include "goalUtils.h"
 

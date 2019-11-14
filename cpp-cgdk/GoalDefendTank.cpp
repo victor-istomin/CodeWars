@@ -5,7 +5,7 @@
 #include "state.h"
 #include "VehicleGroup.h"
 #include "GoalMixTanksAndHealers.h"
-#include "goalDefendHelicoptersFromRush.h"
+#include "GoalDefendHelicoptersFromRush.h"
 #include "goalManager.h"
 #include "goalUtils.h"
 
