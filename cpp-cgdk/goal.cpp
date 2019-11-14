@@ -296,7 +296,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
         const __m256d cellCenterYs   = _mm256_set1_pd(cellCenter.m_y);
         const __m256d rangeHandicaps = _mm256_set1_pd(VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);
 
-        size_t increment = 16/*256 bits*/ / sizeof(VehiclePosSimd::Value)/*256 bits*/;
+        size_t increment = 32/*256 bits*/ / sizeof(VehiclePosSimd::Value)/*256 bits*/;
         for(const VehiclePosSimd::Value *px = xView.m_begin, *py = yView.m_begin, *pRange = rangeView.m_begin;
             px < xView.m_end;
             px += increment, py += increment, pRange += increment)   // #bug - will lose last elements (when no 256 bits available)
