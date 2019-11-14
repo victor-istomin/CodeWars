@@ -83,7 +83,7 @@ bool DefendHelicoptersFromRush::doAttack(Callback shouldAbort, Callback shouldPr
         double distance = Vec2d(targetPoint - attackWith.m_center).length();
         static const int MIN_DANGEROUS_TICKS_GAP = 5;
 
-        int enemyTicksGap = std::max(MIN_DANGEROUS_TICKS_GAP, 
+        int enemyTicksGap = std::max(MIN_DANGEROUS_TICKS_GAP,
                             static_cast<int>(distance / (firstUnit->getMaxSpeed() + attackTarget.m_units.front().lock()->getMaxSpeed())));
 
         nTicksGap = enemyTicksGap;
@@ -93,8 +93,8 @@ bool DefendHelicoptersFromRush::doAttack(Callback shouldAbort, Callback shouldPr
     auto smartWaiter = [this, dumbWaiter]() { return state().enemyNuclearMissileTarget() != Point() || dumbWaiter(); };
 
     pushBackStep(shouldAbort, smartWaiter, DoNothing(), "wait next attack", StepType::ALLOW_MULTITASK);
-    
-    pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicoptersFromRush::doAttack, this, shouldAbort, shouldProceed, std::cref(attackTarget)), 
+
+    pushBackStep(shouldAbort, shouldProceed, std::bind(&DefendHelicoptersFromRush::doAttack, this, shouldAbort, shouldProceed, std::cref(attackTarget)),
         "attack again", StepType::ALLOW_MULTITASK);
 
     return true;
@@ -152,10 +152,8 @@ DefendHelicoptersFromRush::DefendHelicoptersFromRush(State& state, GoalManager& 
 
     pushBackStep(abortCheckFn, hasActionPointFn, [this]() { return prepareCoverByAircraft(); }, "fighter: prepare defend pos");
 
-    const auto& fighters = fighterGroup();
-
-    auto isReadyForAttack = [this, hasActionPointFn](const VehicleGroup& attackWith, const VehicleGroup& attackTarget)
-    { 
+    auto isReadyForAttack = [hasActionPointFn](const VehicleGroup& attackWith, const VehicleGroup& attackTarget)
+    {
         if (attackWith.m_units.empty() || attackTarget.m_units.empty())
             return true;   // do nothing if not possible to attach (don't block entire goal)
 
@@ -176,15 +174,15 @@ DefendHelicoptersFromRush::DefendHelicoptersFromRush(State& state, GoalManager& 
         return attackWith.m_center.getDistanceTo(attackTarget.m_rect.m_topLeft) < distanceLimit;
     };
 
-    auto doAttackFighters = [this, abortCheckFn, isReadyForAttack]() 
-    { 
+    auto doAttackFighters = [this, abortCheckFn, isReadyForAttack]()
+    {
         const VehicleGroup& attacker = fighterGroup();
         const VehicleGroup& target   = allienFighters();
 
-        return doAttack(abortCheckFn, std::bind(isReadyForAttack, std::cref(attacker), std::cref(target)), target); 
+        return doAttack(abortCheckFn, std::bind(isReadyForAttack, std::cref(attacker), std::cref(target)), target);
     };
-    
-    auto shouldStartAttack = [&isNear, &isReadyForAttack, this]()
+
+    auto shouldStartAttack = [&isNear, this]()
     {
         const double distanceLimit = this->state().enemyDoesNotHeap() ? 8 * fighterGroup().m_rect.width() : 6 * fighterGroup().m_rect.width();
         return isNear(fighterGroup(), allienFighters(), distanceLimit);
@@ -244,8 +242,8 @@ bool DefendHelicoptersFromRush::shiftAircraftAway()
     const double near = 1.2;
     const double far = 2.4;
 
-    Point solutions[] = 
-    { 
+    Point solutions[] =
+    {
         tankGroup().m_center,                            // it's fine idea to defend tanks
 
         fighterCenter + (Point(fighters.m_rect.width(), 0)  * near),       // right
@@ -265,7 +263,7 @@ bool DefendHelicoptersFromRush::shiftAircraftAway()
         fighterCenter - (Point(fighters.m_rect.width(), fighters.m_rect.height()) * far),         // far left up
 
         fighterCenter + (Point(fighters.m_rect.width(), fighters.m_rect.height()) * far * far)    // very far down and right
-    }; 
+    };
 
     auto solutionIt = std::find_if(std::begin(solutions), std::end(solutions),
         [&helicoptersCenter, &ifvCenter, &fighterCenter, &fighters, &helicopters, this](const Point& solution)
@@ -282,12 +280,7 @@ bool DefendHelicoptersFromRush::shiftAircraftAway()
             return false;
         }
 
-        Vec2d fighter2helics   = Vec2d::fromPoint(helicoptersCenter - fighterCenter);
         Vec2d fighter2solution = Vec2d::fromPoint(solution - fighterCenter);
-
-        Vec2d helics2fighter  = Vec2d::fromPoint(fighterCenter - helicoptersCenter);
-        Vec2d helics2solution = Vec2d::fromPoint(solution - helicoptersCenter);
-
         VehicleGroupGhost fightersGhost = VehicleGroupGhost(fighters, fighter2solution);  // TODO
 
         return helicopters.isPathFree(ifvCenter, Obstacle(fightersGhost), m_helicopterIteration)
@@ -297,8 +290,8 @@ bool DefendHelicoptersFromRush::shiftAircraftAway()
     const Point solution = solutionIt != std::end(solutions) ? *solutionIt : *std::rbegin(solutions);
     const Vec2d solutionPath = Vec2d::fromPoint(solution - fighterCenter);
 
-    pushNextStep([this]() { return abortCheck(); }, 
-                 [this]() { return state().hasActionPoint(); }, 
+    pushNextStep([this]() { return abortCheck(); },
+                 [this]() { return state().hasActionPoint(); },
                  [solutionPath, this]() { this->state().setMoveAction(solutionPath); return true; }, "move fighters");
 
     return true;
@@ -405,7 +398,7 @@ Point DefendHelicoptersFromRush::getFightersTargetPoint(const VehicleGroup& main
     attackPoints.reserve(mainTarget.m_units.size());
 
     VehiclePtr myFirstUnit = attackWith.m_units.front().lock();
-    
+
     VehicleGroup mergedGroup;
     const double maxDangerousHealth = attackWith.m_healthSum / 2;
     if (state().isEnemyCoveredByAnother(mainTarget.m_units.front().lock()->getType(), mergedGroup)
@@ -413,16 +406,16 @@ Point DefendHelicoptersFromRush::getFightersTargetPoint(const VehicleGroup& main
     {
         // enemy is mixed with another group, be careful
 
-        // TODO - add some better anchor like my spawn position, closest unit, etc. 
+        // TODO - add some better anchor like my spawn position, closest unit, etc.
         const Point& anchor = attackWith.m_center;
-        
+
         std::vector<Point> enemyFringe;
         enemyFringe.reserve(mergedGroup.m_units.size());
 
-        std::transform(mergedGroup.m_units.begin(), mergedGroup.m_units.end(), std::back_inserter(enemyFringe), 
+        std::transform(mergedGroup.m_units.begin(), mergedGroup.m_units.end(), std::back_inserter(enemyFringe),
             [](const VehicleCache& cache) { return *cache.lock(); });
 
-        std::sort(enemyFringe.begin(), enemyFringe.end(), 
+        std::sort(enemyFringe.begin(), enemyFringe.end(),
             [&anchor](const Point& left, const Point& right) { return anchor.getSquareDistance(left) < anchor.getSquareDistance(right); });
 
         double attackersGroupRadius = 1;
@@ -459,18 +452,15 @@ Point DefendHelicoptersFromRush::getFightersTargetPoint(const VehicleGroup& main
         double aerialAttackRange = myFirstUnit->getAerialAttackRange();
         double radius = myFirstUnit->getRadius();
 
-        const Point& displacement1 = Point(aerialAttackRange - radius, aerialAttackRange - radius) / sqrt2 / 1.5;
-        const Point& displacement2 = Point(-(aerialAttackRange - radius), aerialAttackRange - radius) / sqrt2 / 1.5;
-        const Point& displacement3 = Point(aerialAttackRange - radius, -(aerialAttackRange - radius)) / sqrt2 / 1.5;
-        const Point& displacement4 = Point(-(aerialAttackRange - radius), -(aerialAttackRange - radius)) / sqrt2 / 1.5;
+        const Point& displacement = Point(aerialAttackRange - radius, aerialAttackRange - radius) / sqrt2 / 1.5;
 
         attackPoints =
         {
             attackTarget.m_center,
 
             attackRect.m_topLeft, attackRect.m_bottomRight, attackRect.bottomLeft(), attackRect.topRight(),
-            attackRect.m_topLeft + displacement1, attackRect.m_bottomRight + displacement1, attackTarget.m_center + displacement1,
-            attackRect.bottomLeft() + displacement1, attackRect.topRight() + displacement1,
+            attackRect.m_topLeft + displacement, attackRect.m_bottomRight + displacement, attackTarget.m_center + displacement,
+            attackRect.bottomLeft() + displacement, attackRect.topRight() + displacement,
         };
     }
 

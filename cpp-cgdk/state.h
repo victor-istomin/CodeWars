@@ -76,9 +76,9 @@ private:
     struct Constants
     {
         struct PointInt
-        { 
-            int m_x; 
-            int m_y; 
+        {
+            int m_x;
+            int m_y;
 
             PointInt(int x, int y) : m_x(x), m_y(y) {}
         };
@@ -114,15 +114,16 @@ private:
         double getMobilityFactor(model::WeatherType weather) const;
         double getMobilityFactor(model::TerrainType terrain) const;
 
-        Constants(double helicopterRadius, const PointInt& tileSize, 
+        Constants(double helicopterRadius, const PointInt& tileSize,
                   GroundVisibility&& groundVisibility, GroundMobility&& groundMobility,
-                  AirVisibility&& airVisibility, AirMobility&& airMobility, 
+                  AirVisibility&& airVisibility, AirMobility&& airMobility,
                   UnitVisionRadius&& unitVision,
                   const TerrainCells& terrain, const WeatherCells& weather)
-            : m_helicoprerRadius(helicopterRadius), m_tileSize(tileSize)
+            : m_helicoprerRadius(helicopterRadius)
             , m_groundVisibility(groundVisibility), m_groundMobility(groundMobility)
             , m_airVisibility(airVisibility), m_airMobility(airMobility)
             , m_unitVision(unitVision), m_terrain(terrain), m_weather(weather)
+            , m_tileSize(tileSize)
         {}
     };
 
@@ -144,8 +145,15 @@ public:
         GROUP_CAPTURING,
     };
 
-    State() : m_world(nullptr), m_game(nullptr), m_move(nullptr), m_player(nullptr), m_enemy(nullptr)
-            , m_isMoveCommitted(false), m_nuclearGuideGroup(nullptr), m_lastMoveTick(-1)
+    State()
+        : m_isMoveCommitted(false)
+        , m_lastMoveTick(-1)
+        , m_nuclearGuideGroup(nullptr)
+        , m_world(nullptr)
+        , m_player(nullptr)
+        , m_enemy(nullptr)
+        , m_game(nullptr)
+        , m_move(nullptr)
     {}
 
     Constants& constants() { return *m_constants; }

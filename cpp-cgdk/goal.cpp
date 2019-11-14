@@ -63,7 +63,7 @@ bool Goal::isNoMoveComitted()
 
 bool Goal::checkNuclearLaunch()
 {
-    static const double LOOKUP_RANGE = 10 * m_state.game()->getFighterSpeed() + m_state.game()->getFighterVisionRange() 
+    static const double LOOKUP_RANGE = 10 * m_state.game()->getFighterSpeed() + m_state.game()->getFighterVisionRange()
                                           + m_state.game()->getTacticalNuclearStrikeRadius();
 
     // #todo - remove hack
@@ -105,7 +105,6 @@ bool Goal::checkNuclearLaunch()
         auto getDamage = [decaySpeed, maxPossibleDamage, myPlayerId](const Point& hitPoint, const model::Vehicle& unit, double teammateDamageFactor = -1.5)
         {
             double real   = std::max(0.0, maxPossibleDamage - (hitPoint.getDistanceTo(unit) / decaySpeed));   // TODO - check!
-            double damage = real >= unit.getDurability() ? unit.getMaxDurability() : real;
 
             return (unit.getPlayerId() == myPlayerId ? teammateDamageFactor : 1.0) * real;
         };
@@ -264,13 +263,12 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
     DamageField affectEnemyField ((int)reachableRect.width(), (int)reachableRect.height(), reachableRect.m_topLeft);
 
-    Point fieldsDxDy        = reachableRect.m_topLeft;
     const double cellHypot  = std::hypot(affectEnemyField.cellWidth() / 2, affectEnemyField.cellHeight() / 2);
     const double nukeRadius = m_state.game()->getTacticalNuclearStrikeRadius() + cellHypot;
 
     using Vehicles = std::vector<VehiclePtr>;
 
-	static VehiclePosSimd s_simdDistances;   // #todo - fixme
+    static VehiclePosSimd s_simdDistances;   // #todo - fixme
 
 #ifdef USE_SIMD
     s_simdDistances.allocateAtLeast(std::max<size_t>({ teammates.size(), reachableAlliens.size(), 1024 }));
@@ -278,17 +276,17 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
     for(const VehiclePtr& teammate : teammatesHighHp)
         s_simdDistances.addVehicle(*teammate, teammate->getSquaredVisionRange());
 
-	size_t simdIncrement = 16/*256 bits*/ / sizeof(VehiclePosSimd::Value);
-	for(int i = s_simdDistances.size(); (i % simdIncrement) == 0; ++i)
-		s_simdDistances.addVehicle(*teammatesHighHp.front(), -1);    // add dummies to fill the whole YMM register
+    size_t simdIncrement = 16/*256 bits*/ / sizeof(VehiclePosSimd::Value);
+    for(int i = s_simdDistances.size(); (i % simdIncrement) == 0; ++i)
+        s_simdDistances.addVehicle(*teammatesHighHp.front(), -1);    // add dummies to fill the whole YMM register
 #endif
 
     // fill each reachable by teammate cell with '1'
     affectEnemyField.apply(teammatesHighHp,
-        [nukeRadius, this](const Vehicles& teammates, uint16_t isReachable, const Point& cellCenter, const auto& pf) -> uint16_t
+        [](const Vehicles& teammates, uint16_t isReachable, const Point& cellCenter, const auto& pf) -> uint16_t
     {
 #ifdef USE_SIMD
-		//DebugBreak();
+        //DebugBreak();
 
         const auto xView     = s_simdDistances.getXs();
         const auto yView     = s_simdDistances.getYs();
@@ -300,7 +298,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
         size_t increment = 16/*256 bits*/ / sizeof(VehiclePosSimd::Value)/*256 bits*/;
         for(const VehiclePosSimd::Value *px = xView.m_begin, *py = yView.m_begin, *pRange = rangeView.m_begin;
-            px < xView.m_end; 
+            px < xView.m_end;
             px += increment, py += increment, pRange += increment)   // #bug - will lose last elements (when no 256 bits available)
         {
             __m256d xDiff = _mm256_sub_pd(_mm256_load_pd(px), cellCenterXs);

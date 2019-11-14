@@ -129,7 +129,7 @@ void State::updateEnemyStats()
         m_enemyStats.m_startedWithAirRush  /= EnemyStrategyStats::INCREMENT_DIVIDER;
         m_enemyStats.m_startedWithSlowHeap /= EnemyStrategyStats::INCREMENT_DIVIDER;
 
-        // --- detect whether aircraft rushes me ahead of other enemy troops 
+        // --- detect whether aircraft rushes me ahead of other enemy troops
 
         const VehicleGroup& enemyFighters    = alliens(VehicleType::FIGHTER);
         const VehicleGroup& enemyHelicopters = alliens(VehicleType::HELICOPTER);
@@ -162,14 +162,14 @@ void State::updateEnemyStats()
 
         size_t intersections = 0;
         for(size_t i = 0; i < k_unitTypes; ++i)
-        { 
+        {
             const Rect& groupRect = alliens(s_allUnits[i]).m_rect;
             for (size_t j = i + 1; j < k_unitTypes; ++j)
             {
                 const Rect& otherRect = alliens(s_allUnits[j]).m_rect;
                 if (groupRect.overlaps(otherRect))
                     ++intersections;
-            };            
+            };
         }
 
         static const size_t k_minIntersectionsInHeap = k_unitTypes - 1;  // all groups intersects with one neighbor
@@ -413,7 +413,7 @@ void State::setProduceAction(State::Id facilityId, model::VehicleType type /*= m
 {
     m_move->setAction(ActionType::SETUP_VEHICLE_PRODUCTION);
     m_move->setFacilityId(facilityId);
-    
+
     if (type != VehicleType::_UNKNOWN_)
         m_move->setVehicleType(type);
 
@@ -492,7 +492,7 @@ bool State::enemyDoesNotHeap() const
 
 size_t State::newTeammatesCount() const
 {
-    return std::accumulate(m_newTeammates.begin(), m_newTeammates.end(), 0, 
+    return std::accumulate(m_newTeammates.begin(), m_newTeammates.end(), 0,
         [](int old, const auto& idGroupPair) { return old += (int)idGroupPair.second.m_units.size(); });
 }
 
@@ -578,7 +578,7 @@ double State::getDistanceToAlliensRect() const
     if (m_teammatesRect.overlaps(m_alliensRect))
         return 0;
 
-    const Point teammatePoints[] = { m_teammatesRect.m_topLeft, m_teammatesRect.bottomLeft(), 
+    const Point teammatePoints[] = { m_teammatesRect.m_topLeft, m_teammatesRect.bottomLeft(),
                                      m_teammatesRect.topRight(), m_teammatesRect.m_bottomRight };
 
     const Point alliensPoints[] = { m_alliensRect.m_topLeft,  m_alliensRect.bottomLeft(),

@@ -33,8 +33,9 @@ private:
         bool        m_isMultitaskPoint;
 
         Step(Callback shouldAbort, Callback shouldProceed, Callback proceed, const char* debugName = nullptr, StepType type = StepType::ATOMIC)
-            : m_shouldAbort(shouldAbort), m_shouldProceed(shouldProceed), m_proceed(proceed), m_debugName(debugName)
-            , m_isMultitaskPoint(type == StepType::ALLOW_MULTITASK) 
+            : m_debugName(debugName)
+            , m_shouldAbort(shouldAbort), m_shouldProceed(shouldProceed), m_proceed(proceed)
+            , m_isMultitaskPoint(type == StepType::ALLOW_MULTITASK)
         {}
     };
 
@@ -111,12 +112,12 @@ public:
     bool isStarted() const               { return m_isStarted; }
     bool canPause() const                { return isFinished() || !isStarted() || m_steps.front()->m_isMultitaskPoint; }
 
-    bool isEligibleForBackgroundMode(const Goal* interrupted) 
-    { 
+    bool isEligibleForBackgroundMode(const Goal* interrupted)
+    {
         // ensure it will return execution
         bool hasMultitaskPoint = std::find_if(m_steps.begin(), m_steps.end(), [](const StepPtr& step) { return step->m_isMultitaskPoint; }) != m_steps.end();
 
-        return this != interrupted && hasMultitaskPoint && isCompatibleWith(interrupted); 
+        return this != interrupted && hasMultitaskPoint && isCompatibleWith(interrupted);
     }
 
     void performStep(GoalManager& goalManager, bool isBackgroundMode);

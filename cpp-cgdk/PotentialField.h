@@ -136,19 +136,20 @@ public:
         {
             const Score& cellScore = *it;
 
-            constexpr const size_t end = N;
+            constexpr const int end = N;
+            constexpr const int last = N - 1;
             int pos = end;
 
-            for(int i = N - 1; i >= 0 && (bestPointers[i] == nullptr || *bestPointers[i] < cellScore); --i)
+            for(int i = last; i >= 0 && (bestPointers[i] == nullptr || *bestPointers[i] < cellScore); --i)
             {
                 pos = i;
             }
 
-            if(pos == (N - 1))
+            if(pos == last)
             {
                 bestPointers[pos] = &cellScore;
             }
-            else if(pos < (N - 1))
+            else if(pos < last)
             {
                 std::memmove(&bestPointers[pos + 1], &bestPointers[pos], sizeof(bestPointers.front()) * (N - pos - 1));   // shift 'tail'
                 bestPointers[pos] = &cellScore;
