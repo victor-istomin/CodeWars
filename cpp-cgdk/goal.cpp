@@ -4,7 +4,6 @@
 #include "DebugOut.h"
 #include "DebugTimer.h"
 #include <array>
-#include "SimdHelpers.h"
 
 #undef min
 #undef max
@@ -254,7 +253,7 @@ bool Goal::checkNuclearLaunch()
     return m_state.isMoveCommitted();
 }
 
-//#define USE_SIMD
+#define USE_SIMD
 #ifdef USE_SIMD
 #include <immintrin.h>
 #endif
@@ -271,45 +270,49 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
     using Vehicles = std::vector<VehiclePtr>;
 
+	static VehiclePosSimd s_simdDistances;   // #todo - fixme
+
 #ifdef USE_SIMD
-    //#todo - non-static
-    static VehiclePosSimd simdDistances;
-    simdDistances.allocateAtLeast(std::max<size_t>({ teammates.size(), reachableAlliens.size(), 1024 }));
-    simdDistances.clear();
+    s_simdDistances.allocateAtLeast(std::max<size_t>({ teammates.size(), reachableAlliens.size(), 1024 }));
+    s_simdDistances.clear();
     for(const VehiclePtr& teammate : teammatesHighHp)
-        simdDistances.addVehicle(*teammate, teammate->getSquaredVisionRange());
-    //simdDistances.addVehicles(teammatesHighHp);
+        s_simdDistances.addVehicle(*teammate, teammate->getSquaredVisionRange());
+
+	size_t simdIncrement = 16/*256 bits*/ / sizeof(VehiclePosSimd::Value);
+	for(int i = s_simdDistances.size(); (i % simdIncrement) == 0; ++i)
+		s_simdDistances.addVehicle(*teammatesHighHp.front(), -1);    // add dummies to fill the whole YMM register
 #endif
 
     // fill each reachable by teammate cell with '1'
     affectEnemyField.apply(teammatesHighHp,
-        [nukeRadius](const Vehicles& teammates, uint16_t isReachable, const Point& cellCenter, const auto& pf) -> uint16_t
+        [nukeRadius, this](const Vehicles& teammates, uint16_t isReachable, const Point& cellCenter, const auto& pf) -> uint16_t
     {
 #ifdef USE_SIMD
+		//DebugBreak();
 
-        const auto xView     = simdDistances.getXs();
-        const auto yView     = simdDistances.getYs();
-        const auto rangeView = simdDistances.getExtras();
+        const auto xView     = s_simdDistances.getXs();
+        const auto yView     = s_simdDistances.getYs();
+        const auto rangeView = s_simdDistances.getExtras();
 
-        const __m256 cellCenterXs   = _mm256_set1_ps(cellCenter.m_x);
-        const __m256 cellCenterYs   = _mm256_set1_ps(cellCenter.m_y);
-        const __m256 rangeHandicaps = _mm256_set1_ps(VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);
+        const __m256d cellCenterXs   = _mm256_set1_pd(cellCenter.m_x);
+        const __m256d cellCenterYs   = _mm256_set1_pd(cellCenter.m_y);
+        const __m256d rangeHandicaps = _mm256_set1_pd(VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);
 
         size_t increment = 16/*256 bits*/ / sizeof(VehiclePosSimd::Value)/*256 bits*/;
         for(const VehiclePosSimd::Value *px = xView.m_begin, *py = yView.m_begin, *pRange = rangeView.m_begin;
-            px != xView.m_end; 
+            px < xView.m_end; 
             px += increment, py += increment, pRange += increment)   // #bug - will lose last elements (when no 256 bits available)
         {
-            __m256 xDiff = _mm256_sub_ps(_mm256_load_ps(px), cellCenterXs);
-            __m256 diffSq = _mm256_mul_ps(xDiff, xDiff);
+            __m256d xDiff = _mm256_sub_pd(_mm256_load_pd(px), cellCenterXs);
+            __m256d diffSq = _mm256_mul_pd(xDiff, xDiff);
 
-            __m256 yDiff = _mm256_sub_ps(_mm256_load_ps(py), cellCenterYs);
-            diffSq = _mm256_add_ps(diffSq, _mm256_mul_ps(yDiff, yDiff));
+            __m256d yDiff = _mm256_sub_pd(_mm256_load_pd(py), cellCenterYs);
+            diffSq = _mm256_add_pd(diffSq, _mm256_mul_pd(yDiff, yDiff));
 
-            __m256 rangeSq = _mm256_mul_ps(_mm256_load_ps(pRange), rangeHandicaps);
+            __m256d rangeSq = _mm256_mul_pd(_mm256_load_pd(pRange), rangeHandicaps);
 
-            __m256 isLess = _mm256_cmp_ps(diffSq, rangeSq, _CMP_LT_OQ);
-            if(!_mm256_testz_ps(isLess, isLess))
+            __m256d isLess = _mm256_cmp_pd(diffSq, rangeSq, _CMP_LT_OQ);
+            if(!_mm256_testz_pd(isLess, isLess))
                 return 1;
         }
 

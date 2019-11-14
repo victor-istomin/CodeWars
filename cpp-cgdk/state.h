@@ -71,7 +71,7 @@ private:
     struct Constants;
     std::unique_ptr<Constants> m_constants;
     EnemyStrategyStats   m_enemyStats;
-    VehicleSpeedByID     m_vehiсleSpeed;
+    VehicleSpeedByID     m_vehicleSpeed;
 
     struct Constants
     {

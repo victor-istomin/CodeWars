@@ -5,6 +5,7 @@
 #include "forwardDeclarations.h"
 #include "state.h"
 #include "PotentialField.h"
+#include "SimdHelpers.h"
 
 class Goal
 {

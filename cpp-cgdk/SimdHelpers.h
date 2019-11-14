@@ -70,15 +70,13 @@ public:
         size_t bufferIndex = 0;
         for(Buffer& buffer : m_holders)
         {
-            const int alignment = 32;
-
-            size_t elementsCount = count + alignment / sizeof(FieldType) + 1;
+            size_t elementsCount = count + cacheLineSize / sizeof(FieldType) + 1;
             buffer.reset(new FieldType[elementsCount]);
             void*  data   = buffer.get();
             size_t rest   = elementsCount * sizeof(FieldType);
             size_t needed = count * sizeof(FieldType);
 
-            m_properties[bufferIndex].m_begin = reinterpret_cast<FieldType*>(std::align(alignment, needed, data, rest));
+            m_properties[bufferIndex].m_begin = reinterpret_cast<FieldType*>(std::align(cacheLineSize, needed, data, rest));
             m_properties[bufferIndex].m_end   = m_properties[bufferIndex].m_begin + count;
 
             if(nullptr == m_properties[bufferIndex].m_begin)
@@ -97,9 +95,9 @@ public:
     }
 };
 
-class VehiclePosSimd : public SimdHelper<float, 3/*x,y,extra-parameter*/>
+class VehiclePosSimd : public SimdHelper<double, 3/*x,y,extra-parameter*/>
 {
-    using Base = SimdHelper<float, 3/*x,y*/>;
+    using Base = SimdHelper<float, 3/*x,y,extra*/>;
 
 public:
     void addVehicle(const model::Vehicle& v, float extra = 0)

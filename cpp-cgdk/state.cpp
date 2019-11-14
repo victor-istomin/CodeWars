@@ -90,7 +90,7 @@ void State::updateVehicles()
         }
     }
 
-    m_vehiñleSpeed.clear();
+    m_vehicleSpeed.clear();
     for (const model::VehicleUpdate& update : m_world->getVehicleUpdates())
     {
         if (update.getDurability() != 0)
@@ -100,7 +100,7 @@ void State::updateVehicles()
 
             Point oldPoint = Point(existing);
             if(oldPoint != Point())
-                m_vehiñleSpeed[newUnit.getId()] = (newUnit - oldPoint);
+                m_vehicleSpeed[newUnit.getId()] = (newUnit - oldPoint);
 
             existing = std::move(newUnit);
         }
@@ -536,8 +536,8 @@ Point State::getVehicleCurrentSpeed(const model::Vehicle& v) const
 {
     Point speed;
 
-    auto itFound = m_vehiñleSpeed.find(v.getId());
-    if(itFound != m_vehiñleSpeed.end())
+    auto itFound = m_vehicleSpeed.find(v.getId());
+    if(itFound != m_vehicleSpeed.end())
         speed = itFound->second;
 
     return speed;
