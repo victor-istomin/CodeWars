@@ -215,7 +215,6 @@ bool RushWithAircraft::validateMoveVector(Vec2d& moveVector)
 
     if (isMoveAllowed)
     {
-        static const double simulationsStep = k_minStep;
         isMoveAllowed = fighters.isPathFree(fighters.m_center + moveVector, Obstacle(helicopterGroup()), k_minStep);
     }
 

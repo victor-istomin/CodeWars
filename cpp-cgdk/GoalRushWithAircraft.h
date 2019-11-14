@@ -17,8 +17,8 @@ namespace goals
             double              m_minSqDistance;
 
             TargetInfo(const VehicleGroup& group)
-                : m_group(&group)
-                , m_type(group.m_units.empty() ? model::VehicleType::_UNKNOWN_ : group.m_units.front().lock()->getType())
+                : m_type(group.m_units.empty() ? model::VehicleType::_UNKNOWN_ : group.m_units.front().lock()->getType())
+                , m_group(&group)
                 , m_dangerFactor(0)
                 , m_minSqDistance(std::numeric_limits<double>::max())
             {}

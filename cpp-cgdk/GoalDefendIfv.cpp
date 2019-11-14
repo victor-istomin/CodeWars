@@ -17,7 +17,6 @@ bool GoalDefendIfv::isTanksBeaten() const
 
 bool GoalDefendIfv::shiftAircraft()
 {
-    const VehicleGroup& enemyTanks  = allienTanks();
     const VehicleGroup& ifv         = ifvGroup();
     const VehicleGroup& fighters    = fighterGroup();
     const VehicleGroup& helicopters = helicopterGroup();

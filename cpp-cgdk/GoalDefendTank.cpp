@@ -231,7 +231,6 @@ bool GoalDefendTank::loopFithersAttack()
 {
     const VehicleGroup& target      = allienHelicopters();
     const VehicleGroup& fighters    = fighterGroup();
-    const VehicleGroup& tanks       = tankGroup();
     const VehicleGroup& helicopters = helicopterGroup();
 
     if (target.m_units.empty() || fighters.m_units.empty() || tankGroup().m_units.empty())
@@ -246,7 +245,6 @@ bool GoalDefendTank::loopFithersAttack()
         // not yet collide with teammate helicopters, try avoid further collisions
         const Point fightersSize = Point(fighters.m_rect.width(), fighters.m_rect.height());
         const Point fightersWidth = Point(fighters.m_rect.width(), 0);
-        const Point fightersHeight = Point(0, fighters.m_rect.height());
 
         const Point attackPoints[] =
         {
