@@ -4,6 +4,7 @@
 #include "DebugOut.h"
 #include "DebugTimer.h"
 #include <array>
+#include "SimdHelpers.h"
 
 #undef min
 #undef max
@@ -253,37 +254,10 @@ bool Goal::checkNuclearLaunch()
     return m_state.isMoveCommitted();
 }
 
-template <typename FieldType, size_t PropertiesCount, size_t MaxObjectsCount>
-class alignas(16) SimdHelper
-{
-    FieldType m_field[PropertiesCount][MaxObjectsCount];      // e.g. 2 fields, 3 rows { {x,x,x}, {y,y,y} }
-    size_t m_objectsCount = 0;
-
-    template <typename Field, typename ... Fields>
-    void addCell(size_t objectIndex, size_t cellIndex, Field&& first, Fields&& ... rest)
-    {
-        getPropertyArray(cellIndex)[objectIndex] = std::forward<Field>(first);
-
-        if constexpr(sizeof ... (rest) > 0)
-            addCell(objectIndex, ++cellIndex, std::forward<Fields>(rest)...);
-    }
-
-public:
-
-    using PropertyArray = FieldType[MaxObjectsCount];
-    PropertyArray& getPropertyArray(size_t propertyIndex)               { return m_field[propertyIndex]; }
-    FieldType&     getValue(PropertyArray& singlePart, size_t rowIndex) { return singlePart[rowIndex]; }
-
-    template <typename ... Fields>
-    void addRow(Fields&& ... args)
-    {
-        static_assert(sizeof ... (args) == FieldsCount, "Insufficient parameters for the whole object");
-
-        addCell(++m_objectsCount, 0, std::forward<Fields>(args)...);
-    }
-};
-
-
+//#define USE_SIMD
+#ifdef USE_SIMD
+#include <immintrin.h>
+#endif
 
 Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vector<VehiclePtr>& teammates, const std::vector<VehiclePtr>& teammatesHighHp, const std::vector<VehiclePtr>& reachableAlliens)
 {
@@ -297,10 +271,49 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
     using Vehicles = std::vector<VehiclePtr>;
 
+#ifdef USE_SIMD
+    //#todo - non-static
+    static VehiclePosSimd simdDistances;
+    simdDistances.allocateAtLeast(std::max<size_t>({ teammates.size(), reachableAlliens.size(), 1024 }));
+    simdDistances.clear();
+    for(const VehiclePtr& teammate : teammatesHighHp)
+        simdDistances.addVehicle(*teammate, teammate->getSquaredVisionRange());
+    //simdDistances.addVehicles(teammatesHighHp);
+#endif
+
     // fill each reachable by teammate cell with '1'
     affectEnemyField.apply(teammatesHighHp,
         [nukeRadius](const Vehicles& teammates, uint16_t isReachable, const Point& cellCenter, const auto& pf) -> uint16_t
     {
+#ifdef USE_SIMD
+
+        const auto xView     = simdDistances.getXs();
+        const auto yView     = simdDistances.getYs();
+        const auto rangeView = simdDistances.getExtras();
+
+        const __m256 cellCenterXs   = _mm256_set1_ps(cellCenter.m_x);
+        const __m256 cellCenterYs   = _mm256_set1_ps(cellCenter.m_y);
+        const __m256 rangeHandicaps = _mm256_set1_ps(VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);
+
+        size_t increment = 16/*256 bits*/ / sizeof(VehiclePosSimd::Value)/*256 bits*/;
+        for(const VehiclePosSimd::Value *px = xView.m_begin, *py = yView.m_begin, *pRange = rangeView.m_begin;
+            px != xView.m_end; 
+            px += increment, py += increment, pRange += increment)   // #bug - will lose last elements (when no 256 bits available)
+        {
+            __m256 xDiff = _mm256_sub_ps(_mm256_load_ps(px), cellCenterXs);
+            __m256 diffSq = _mm256_mul_ps(xDiff, xDiff);
+
+            __m256 yDiff = _mm256_sub_ps(_mm256_load_ps(py), cellCenterYs);
+            diffSq = _mm256_add_ps(diffSq, _mm256_mul_ps(yDiff, yDiff));
+
+            __m256 rangeSq = _mm256_mul_ps(_mm256_load_ps(pRange), rangeHandicaps);
+
+            __m256 isLess = _mm256_cmp_ps(diffSq, rangeSq, _CMP_LT_OQ);
+            if(!_mm256_testz_ps(isLess, isLess))
+                return 1;
+        }
+
+#else
         for(const VehiclePtr& teammate : teammates)
         {
             double maxSquare = teammate->getSquaredVisionRange() * (VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);    //#todo - avoid this coefficient (just in case if guide will reach cloud a few turns later)
@@ -308,6 +321,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
             if(cellCenter.isDistanceSqLess(*teammate, maxSquare))
                 return 1;
         }
+#endif
 
         return 0;
     });

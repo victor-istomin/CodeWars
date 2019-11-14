@@ -63,7 +63,7 @@ protected:
     template <typename... Args>
     void pushBackStep(Args&&... args)
     {
-        return m_steps.emplace_back(std::make_unique<Step>(std::forward<Args>(args)...));
+        m_steps.emplace_back(std::make_unique<Step>(std::forward<Args>(args)...));
     }
 
     template <typename... Args>
