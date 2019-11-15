@@ -52,7 +52,7 @@ private:
     bool checkNuclearLaunch();
 
     static constexpr const int    DRAFT_CELLS_COUNT     = 32;
-    static constexpr const double VISION_RANGE_HANDICAP = 0.7;    //#todo - avoid
+    static constexpr const double VISION_RANGE_HANDICAP = 0.8;    //#todo - avoid
     using DamageField = PotentialField<uint16_t, Point, DRAFT_CELLS_COUNT>;
 
     DamageField getDamageField(const Rect &reachableRect, const std::vector<VehiclePtr>& teammates, const std::vector<VehiclePtr>& teammatesHighHp, const std::vector<VehiclePtr>& reachableAlliens);

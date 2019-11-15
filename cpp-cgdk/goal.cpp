@@ -278,16 +278,14 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
 
     size_t simdIncrement = 32/*256 bits*/ / sizeof(VehiclePosSimd::Value);
     for(int i = s_simdDistances.size(); (i % simdIncrement) == 0; ++i)
-        s_simdDistances.addVehicle(*teammatesHighHp.front(), -1);    // add dummies to fill the whole YMM register
+        s_simdDistances.addVehicle(*teammatesHighHp.front(), 0);    // add dummies to fill the whole YMM register
 #endif
 
     // fill each reachable by teammate cell with '1'
     affectEnemyField.apply(teammatesHighHp,
-        [](const Vehicles& teammates, uint16_t isReachable, const Point& cellCenter, const auto& pf) -> uint16_t
+        [](const Vehicles& teammatesHighHp, uint16_t isReachable, const Point& cellCenter, const auto& pf) -> uint16_t
     {
 #ifdef USE_SIMD
-        //DebugBreak();
-
         const auto xView     = s_simdDistances.getXs();
         const auto yView     = s_simdDistances.getYs();
         const auto rangeView = s_simdDistances.getExtras();
@@ -296,7 +294,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
         const __m256d cellCenterYs   = _mm256_set1_pd(cellCenter.m_y);
         const __m256d rangeHandicaps = _mm256_set1_pd(VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);
 
-        size_t increment = 32/*256 bits*/ / sizeof(VehiclePosSimd::Value)/*256 bits*/;
+        size_t increment = 32/*256 bits*/ / sizeof(VehiclePosSimd::Value);
         for(const VehiclePosSimd::Value *px = xView.m_begin, *py = yView.m_begin, *pRange = rangeView.m_begin;
             px < xView.m_end;
             px += increment, py += increment, pRange += increment)   // #bug - will lose last elements (when no 256 bits available)
@@ -315,7 +313,7 @@ Goal::DamageField Goal::getDamageField(const Rect& reachableRect, const std::vec
         }
 
 #else
-        for(const VehiclePtr& teammate : teammates)
+        for(const VehiclePtr& teammate : teammatesHighHp)
         {
             double maxSquare = teammate->getSquaredVisionRange() * (VISION_RANGE_HANDICAP * VISION_RANGE_HANDICAP);    //#todo - avoid this coefficient (just in case if guide will reach cloud a few turns later)
 

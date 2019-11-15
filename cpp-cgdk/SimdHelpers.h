@@ -21,7 +21,6 @@ private:
 
     using Buffer = std::unique_ptr<FieldType[]>;
 
-    //FieldType m_field[PropertiesCount][MaxObjectsCount];      // e.g. 2 fields, 3 rows { {x,x,x}, {y,y,y} }
     std::array<View,   PropertiesCount> m_properties;
     std::array<Buffer, PropertiesCount> m_holders;
 
@@ -97,10 +96,8 @@ public:
 
 class VehiclePosSimd : public SimdHelper<double, 3/*x,y,extra-parameter*/>
 {
-    using Base = SimdHelper<float, 3/*x,y,extra*/>;
-
 public:
-    void addVehicle(const model::Vehicle& v, float extra = 0)
+    void addVehicle(const model::Vehicle& v, Value extra = 0)
     {
         addRow(v.getX(), v.getY(), extra);
     }
